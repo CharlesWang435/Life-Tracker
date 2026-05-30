@@ -17,6 +17,7 @@ struct DayDetailView: View {
         ScrollView {
             VStack(spacing: 20) {
                 DayTimelineBar(sessions: sessions, dayStart: dayStart, dayEnd: dayEnd)
+                TodayDonutChart(sessions: sessions, title: "Breakdown")
                 CategoryTotals(sessions: sessions)
                 SessionList(sessions: sessions)
             }

@@ -30,6 +30,12 @@ struct HistoryView: View {
                     )
                 } else {
                     List {
+                        Section {
+                            WeekBarChart(sessions: sessions)
+                                .padding(.vertical, 8)
+                                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                                .listRowBackground(Color.clear)
+                        }
                         ForEach(weeks) { week in
                             Section {
                                 ForEach(week.days) { day in

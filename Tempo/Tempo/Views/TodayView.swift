@@ -40,6 +40,7 @@ struct TodayView: View {
                         todaySessions: todaySessions
                     )
                     DayTimelineBar(sessions: todaySessions, dayStart: dayStart, dayEnd: dayEnd)
+                    TodayDonutChart(sessions: todaySessions, title: "Today's breakdown")
                     CategoryTotals(sessions: todaySessions)
                     SessionList(sessions: todaySessions)
                 }
