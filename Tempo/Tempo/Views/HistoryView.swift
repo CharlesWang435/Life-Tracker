@@ -4,10 +4,22 @@ import LifeTrackerCore
 
 struct HistoryView: View {
     @Query(sort: \Session.startDate, order: .reverse) private var sessions: [Session]
+    @Query(sort: \LogCategory.sortOrder) private var allCategories: [LogCategory]
+
+    @State private var searchText: String = ""
+    @State private var filterCategoryID: UUID? = nil
+
+    private var filteredSessions: [Session] {
+        sessions.filter { session in
+            if let id = filterCategoryID, session.category?.id != id { return false }
+            if searchText.isEmpty { return true }
+            return session.category?.name.localizedCaseInsensitiveContains(searchText) ?? false
+        }
+    }
 
     private var weeks: [WeekGroup] {
         let calendar = Calendar.current
-        let byDay = Dictionary(grouping: sessions) { calendar.startOfDay(for: $0.startDate) }
+        let byDay = Dictionary(grouping: filteredSessions) { calendar.startOfDay(for: $0.startDate) }
         let days = byDay
             .map { DayGroup(date: $0.key, sessions: $0.value) }
             .sorted { $0.date > $1.date }
@@ -19,19 +31,24 @@ struct HistoryView: View {
             .sorted { $0.weekStart > $1.weekStart }
     }
 
+    private var hasAnyHistory: Bool { !sessions.isEmpty }
+    private var hasMatches: Bool { !filteredSessions.isEmpty }
+
     var body: some View {
         NavigationStack {
             Group {
-                if sessions.isEmpty {
+                if !hasAnyHistory {
                     ContentUnavailableView(
                         "No history yet",
                         systemImage: "clock",
                         description: Text("Start a category to begin logging.")
                     )
+                } else if !hasMatches {
+                    ContentUnavailableView.search(text: searchText)
                 } else {
                     List {
                         Section {
-                            WeekBarChart(sessions: sessions)
+                            WeekBarChart(sessions: filteredSessions)
                                 .padding(.vertical, 8)
                                 .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                                 .listRowBackground(Color.clear)
@@ -53,6 +70,30 @@ struct HistoryView: View {
                 }
             }
             .navigationTitle("History")
+            .searchable(text: $searchText, prompt: "Search by category")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            filterCategoryID = nil
+                        } label: {
+                            Label("All categories", systemImage: filterCategoryID == nil ? "checkmark" : "")
+                        }
+                        Divider()
+                        ForEach(allCategories) { cat in
+                            Button {
+                                filterCategoryID = (filterCategoryID == cat.id) ? nil : cat.id
+                            } label: {
+                                Label(cat.name, systemImage: filterCategoryID == cat.id ? "checkmark" : cat.sfSymbol)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: filterCategoryID == nil
+                              ? "line.3.horizontal.decrease.circle"
+                              : "line.3.horizontal.decrease.circle.fill")
+                    }
+                }
+            }
         }
     }
 }

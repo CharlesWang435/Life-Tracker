@@ -4,40 +4,47 @@ import LifeTrackerCore
 
 struct TodayView: View {
     @Query private var allCategories: [LogCategory]
-    @Query(sort: \Session.startDate, order: .reverse) private var allSessions: [Session]
+    @Query private var todaySessions: [Session]
+    @Query(filter: #Predicate<Session> { $0.endDate == nil })
+    private var activeSessions: [Session]
 
     @AppStorage("today.sort") private var sortRaw: String = CategorySort.custom.rawValue
     @AppStorage("today.viewStyle") private var styleRaw: String = CategoryViewStyle.grid.rawValue
 
     @State private var showingManualEntry = false
 
-    private var sort: CategorySort {
-        get { CategorySort(rawValue: sortRaw) ?? .custom }
-    }
-    private var viewStyle: CategoryViewStyle {
-        get { CategoryViewStyle(rawValue: styleRaw) ?? .grid }
+    private let dayStart: Date
+    private let dayEnd: Date
+
+    init() {
+        let start = Calendar.current.startOfDay(for: .now)
+        let end = Calendar.current.endOfDay(for: .now)
+        self.dayStart = start
+        self.dayEnd = end
+        _todaySessions = Query(
+            filter: #Predicate<Session> { $0.startDate >= start && $0.startDate < end },
+            sort: \Session.startDate,
+            order: .reverse
+        )
     }
 
-    private var dayStart: Date { Calendar.current.startOfDay(for: .now) }
-    private var dayEnd: Date { Calendar.current.date(byAdding: .day, value: 1, to: dayStart)! }
+    private var sort: CategorySort { CategorySort(rawValue: sortRaw) ?? .custom }
+    private var viewStyle: CategoryViewStyle { CategoryViewStyle(rawValue: styleRaw) ?? .grid }
 
     private var sortedCategories: [LogCategory] {
         sort.apply(to: allCategories)
-    }
-
-    private var todaySessions: [Session] {
-        allSessions.filter { $0.startDate >= dayStart && $0.startDate < dayEnd }
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    ActiveTimerBanner()
+                    ActiveTimerBanner(activeSession: activeSessions.first)
                     CategoryPicker(
                         categories: sortedCategories,
                         style: viewStyle,
-                        todaySessions: todaySessions
+                        todaySessions: todaySessions,
+                        activeID: activeSessions.first?.category?.id
                     )
                     DayTimelineBar(sessions: todaySessions, dayStart: dayStart, dayEnd: dayEnd)
                     TodayDonutChart(sessions: todaySessions, title: "Today's breakdown")

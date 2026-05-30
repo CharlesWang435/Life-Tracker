@@ -40,7 +40,7 @@ struct CategoriesView: View {
             }
             .sheet(isPresented: $showingNewCategory) {
                 NavigationStack {
-                    CategoryEditorView(category: nil)
+                    CategoryEditorView(category: nil, existingCount: categories.count)
                 }
             }
         }
@@ -52,13 +52,13 @@ struct CategoriesView: View {
         for (index, category) in reordered.enumerated() {
             category.sortOrder = index
         }
-        try? context.save()
+        SessionActions.save(context)
     }
 
     private func delete(at offsets: IndexSet) {
         for offset in offsets {
             context.delete(categories[offset])
         }
-        try? context.save()
+        SessionActions.save(context)
     }
 }

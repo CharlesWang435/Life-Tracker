@@ -21,7 +21,7 @@ struct WeekBarChart: View {
         }.reversed()
 
         return days.flatMap { day -> [DayBar] in
-            let dayEnd = calendar.date(byAdding: .day, value: 1, to: day)!
+            let dayEnd = calendar.endOfDay(for: day)
             let daySessions = sessions.filter { $0.startDate >= day && $0.startDate < dayEnd }
             let byCategory = Dictionary(grouping: daySessions, by: { $0.category?.id })
             return byCategory.compactMap { _, items -> DayBar? in

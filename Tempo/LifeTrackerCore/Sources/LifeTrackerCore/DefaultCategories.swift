@@ -36,6 +36,6 @@ public enum DefaultCategories {
             )
             context.insert(category)
         }
-        try? context.save()
+        SessionActions.save(context)
     }
 }

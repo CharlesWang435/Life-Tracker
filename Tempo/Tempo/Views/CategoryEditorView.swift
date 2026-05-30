@@ -7,6 +7,9 @@ struct CategoryEditorView: View {
     @Environment(\.dismiss) private var dismiss
 
     let category: LogCategory?
+    /// Used when creating a new category — the next sortOrder is `existingCount`.
+    /// Avoids a fresh fetch inside save().
+    var existingCount: Int = 0
 
     @State private var name: String = ""
     @State private var color: Color = .blue
@@ -87,16 +90,15 @@ struct CategoryEditorView: View {
             existing.colorHex = hex
             existing.sfSymbol = symbol
         } else {
-            let maxOrder = (try? context.fetch(FetchDescriptor<LogCategory>()))?.map(\.sortOrder).max() ?? -1
             let new = LogCategory(
                 name: name.trimmingCharacters(in: .whitespaces),
                 colorHex: hex,
                 sfSymbol: symbol,
-                sortOrder: maxOrder + 1
+                sortOrder: existingCount
             )
             context.insert(new)
         }
-        try? context.save()
+        SessionActions.save(context)
         dismiss()
     }
 

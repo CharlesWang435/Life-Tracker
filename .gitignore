@@ -11,6 +11,9 @@ build/
 .build/
 .swiftpm/
 
+# Claude Code local state
+.claude/
+
 # Misc
 *.swp
 *.swo

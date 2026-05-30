@@ -84,14 +84,14 @@ struct ManualSessionEditor: View {
             )
             context.insert(new)
         }
-        try? context.save()
+        SessionActions.save(context)
         dismiss()
     }
 
     private func deleteSession() {
         if let session {
             context.delete(session)
-            try? context.save()
+            SessionActions.save(context)
         }
         dismiss()
     }

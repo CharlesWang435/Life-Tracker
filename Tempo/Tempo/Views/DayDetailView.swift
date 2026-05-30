@@ -4,13 +4,23 @@ import LifeTrackerCore
 
 struct DayDetailView: View {
     let date: Date
-    @Query(sort: \Session.startDate, order: .reverse) private var allSessions: [Session]
 
-    private var dayStart: Date { Calendar.current.startOfDay(for: date) }
-    private var dayEnd: Date { Calendar.current.date(byAdding: .day, value: 1, to: dayStart)! }
+    @Query private var sessions: [Session]
 
-    private var sessions: [Session] {
-        allSessions.filter { $0.startDate >= dayStart && $0.startDate < dayEnd }
+    private let dayStart: Date
+    private let dayEnd: Date
+
+    init(date: Date) {
+        self.date = date
+        let start = Calendar.current.startOfDay(for: date)
+        let end = Calendar.current.endOfDay(for: date)
+        self.dayStart = start
+        self.dayEnd = end
+        _sessions = Query(
+            filter: #Predicate<Session> { $0.startDate >= start && $0.startDate < end },
+            sort: \Session.startDate,
+            order: .reverse
+        )
     }
 
     var body: some View {

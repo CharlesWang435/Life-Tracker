@@ -1,12 +1,20 @@
 import Foundation
 import SwiftData
+import OSLog
+
+private let log = Logger(subsystem: "com.charleswang.lifetracker", category: "SessionActions")
 
 public enum SessionActions {
     public static func fetchActive(in context: ModelContext) -> Session? {
         let descriptor = FetchDescriptor<Session>(
             predicate: #Predicate<Session> { $0.endDate == nil }
         )
-        return try? context.fetch(descriptor).first
+        do {
+            return try context.fetch(descriptor).first
+        } catch {
+            log.error("fetchActive failed: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     @MainActor
@@ -20,7 +28,7 @@ public enum SessionActions {
         category.tapCount += 1
         let session = Session(startDate: date, category: category)
         context.insert(session)
-        try? context.save()
+        save(context)
         return session
     }
 
@@ -28,12 +36,23 @@ public enum SessionActions {
     public static func stopActive(in context: ModelContext, at date: Date = .now) {
         guard let active = fetchActive(in: context) else { return }
         active.endDate = date
-        try? context.save()
+        save(context)
     }
 
     @MainActor
     public static func delete(_ session: Session, in context: ModelContext) {
         context.delete(session)
-        try? context.save()
+        save(context)
+    }
+
+    /// Centralised save so we don't sprinkle `try?` across the codebase.
+    /// Logs via OSLog so failures show up in Console.app even in release builds.
+    @MainActor
+    public static func save(_ context: ModelContext) {
+        do {
+            try context.save()
+        } catch {
+            log.error("ModelContext.save failed: \(error.localizedDescription)")
+        }
     }
 }

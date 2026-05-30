@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		E97DB0172FCA053F008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E97DB0162FCA053F008C2256 /* LifeTrackerCore */; };
+		E9C00A012FCB100A008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E9C00A022FCB100A008C2256 /* LifeTrackerCore */; };
+		E9C00A032FCB100A008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E9C00A042FCB100A008C2256 /* LifeTrackerCore */; };
 		E9B90F902FCA0BBA003E44F1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F8F2FCA0BBA003E44F1 /* WidgetKit.framework */; };
 		E9B90F922FCA0BBA003E44F1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F912FCA0BBA003E44F1 /* SwiftUI.framework */; };
 		E9B90FA32FCA0BBB003E44F1 /* Tempo WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9B90F8D2FCA0BBA003E44F1 /* Tempo WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -91,6 +93,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				E9C00A012FCB100A008C2256 /* LifeTrackerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -100,6 +103,7 @@
 			files = (
 				E9B90F922FCA0BBA003E44F1 /* SwiftUI.framework in Frameworks */,
 				E9B90F902FCA0BBA003E44F1 /* WidgetKit.framework in Frameworks */,
+				E9C00A032FCB100A008C2256 /* LifeTrackerCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -183,6 +187,7 @@
 			);
 			name = "Tempo Watch App Watch App";
 			packageProductDependencies = (
+				E9C00A022FCB100A008C2256 /* LifeTrackerCore */,
 			);
 			productName = "Tempo Watch App Watch App";
 			productReference = E9B90F7E2FCA08FB003E44F1 /* Tempo Watch App Watch App.app */;
@@ -205,6 +210,7 @@
 			);
 			name = "Tempo WidgetExtension";
 			packageProductDependencies = (
+				E9C00A042FCB100A008C2256 /* LifeTrackerCore */,
 			);
 			productName = "Tempo WidgetExtension";
 			productReference = E9B90F8D2FCA0BBA003E44F1 /* Tempo WidgetExtension.appex */;
@@ -459,7 +465,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -492,7 +498,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -525,7 +531,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 26.5;
 			};
@@ -559,7 +565,7 @@
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = 4;
 				WATCHOS_DEPLOYMENT_TARGET = 26.5;
 			};
@@ -591,7 +597,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -622,7 +628,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
@@ -677,6 +683,14 @@
 
 /* Begin XCSwiftPackageProductDependency section */
 		E97DB0162FCA053F008C2256 /* LifeTrackerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LifeTrackerCore;
+		};
+		E9C00A022FCB100A008C2256 /* LifeTrackerCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = LifeTrackerCore;
+		};
+		E9C00A042FCB100A008C2256 /* LifeTrackerCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = LifeTrackerCore;
 		};

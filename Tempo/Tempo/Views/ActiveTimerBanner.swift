@@ -1,14 +1,12 @@
 import SwiftUI
-import SwiftData
 import LifeTrackerCore
 
 struct ActiveTimerBanner: View {
+    let activeSession: Session?
     @Environment(\.modelContext) private var context
-    @Query(filter: #Predicate<Session> { $0.endDate == nil })
-    private var activeSessions: [Session]
 
     var body: some View {
-        if let session = activeSessions.first, let category = session.category {
+        if let session = activeSession, let category = session.category {
             TimelineView(.periodic(from: .now, by: 1)) { timeline in
                 HStack(spacing: 14) {
                     Image(systemName: category.sfSymbol)
@@ -39,6 +37,7 @@ struct ActiveTimerBanner: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .sensoryFeedback(.success, trigger: session.id)
                 }
                 .padding(14)
                 .background(Color(hex: category.colorHex).opacity(0.08))

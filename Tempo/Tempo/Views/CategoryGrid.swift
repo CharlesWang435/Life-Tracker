@@ -6,30 +6,32 @@ struct CategoryPicker: View {
     let categories: [LogCategory]
     let style: CategoryViewStyle
     let todaySessions: [Session]
+    let activeID: UUID?
 
     @Environment(\.modelContext) private var context
-    @Query(filter: #Predicate<Session> { $0.endDate == nil })
-    private var activeSessions: [Session]
+    @State private var lastTapID: UUID = UUID()
 
     var body: some View {
-        switch style {
-        case .grid:
-            CategoryGrid(categories: categories, activeID: activeID, onTap: handleTap)
-        case .compact:
-            CompactCategoryGrid(categories: categories, activeID: activeID, onTap: handleTap)
-        case .list:
-            CategoryListLayout(
-                categories: categories,
-                activeID: activeID,
-                todaySessions: todaySessions,
-                onTap: handleTap
-            )
+        Group {
+            switch style {
+            case .grid:
+                CategoryGrid(categories: categories, activeID: activeID, onTap: handleTap)
+            case .compact:
+                CompactCategoryGrid(categories: categories, activeID: activeID, onTap: handleTap)
+            case .list:
+                CategoryListLayout(
+                    categories: categories,
+                    activeID: activeID,
+                    todaySessions: todaySessions,
+                    onTap: handleTap
+                )
+            }
         }
+        .sensoryFeedback(.impact(weight: .medium), trigger: lastTapID)
     }
 
-    private var activeID: UUID? { activeSessions.first?.category?.id }
-
     private func handleTap(_ category: LogCategory) {
+        lastTapID = UUID()
         if activeID == category.id {
             SessionActions.stopActive(in: context)
         } else {
