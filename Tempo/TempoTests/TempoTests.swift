@@ -189,6 +189,76 @@ struct SessionAggregatesTests {
     }
 }
 
+// MARK: - Calendar timer suggestions
+
+@Suite("TimerSuggester")
+struct TimerSuggesterTests {
+
+    /// Default-named categories so the keyword map applies, mirroring DefaultCategories.
+    private func defaultCategories() -> [LogCategory] {
+        DefaultCategories.seeds.enumerated().map { index, seed in
+            LogCategory(name: seed.name, colorHex: seed.colorHex, sfSymbol: seed.sfSymbol, sortOrder: index)
+        }
+    }
+
+    private func event(_ title: String, startsIn minutes: Double, lasts: Double = 60, from now: Date) -> CalendarEvent {
+        let start = now.addingTimeInterval(minutes * 60)
+        return CalendarEvent(title: title, start: start, end: start.addingTimeInterval(lasts * 60))
+    }
+
+    @Test("matches an event title to a category by name")
+    func matchesByName() {
+        let cats = defaultCategories()
+        #expect(TimerSuggester.match(title: "Deep Work block", categories: cats)?.name == "Work")
+    }
+
+    @Test("matches by keyword when no category name appears")
+    func matchesByKeyword() {
+        let cats = defaultCategories()
+        #expect(TimerSuggester.match(title: "Gym session", categories: cats)?.name == "Exercise")
+        #expect(TimerSuggester.match(title: "Morning yoga", categories: cats)?.name == "Exercise")
+    }
+
+    @Test("returns nil when nothing matches")
+    func noMatch() {
+        let cats = defaultCategories()
+        #expect(TimerSuggester.match(title: "Dentist appointment", categories: cats) == nil)
+    }
+
+    @Test("prefers an event happening now over an upcoming one")
+    func prefersHappeningNow() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let cats = defaultCategories()
+        let events = [
+            event("Standup", startsIn: 10, from: now),     // upcoming Work
+            event("Gym", startsIn: -5, lasts: 60, from: now) // already running Exercise
+        ]
+        let suggestion = TimerSuggester.suggestion(for: events, categories: cats, now: now)
+        #expect(suggestion?.category.name == "Exercise")
+        #expect(suggestion?.isHappeningNow == true)
+        #expect(suggestion?.reason == "On now: Gym")
+    }
+
+    @Test("suggests an upcoming event within the lookahead window")
+    func suggestsUpcoming() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let cats = defaultCategories()
+        let events = [event("Standup", startsIn: 10, from: now)]
+        let suggestion = TimerSuggester.suggestion(for: events, categories: cats, now: now)
+        #expect(suggestion?.category.name == "Work")
+        #expect(suggestion?.isHappeningNow == false)
+    }
+
+    @Test("ignores events past or beyond the lookahead window")
+    func ignoresOutOfWindow() {
+        let now = Date(timeIntervalSince1970: 1_000_000)
+        let cats = defaultCategories()
+        let past = event("Gym", startsIn: -120, lasts: 60, from: now)        // ended an hour ago
+        let farFuture = event("Standup", startsIn: 120, from: now)           // 2h out
+        #expect(TimerSuggester.suggestion(for: [past, farFuture], categories: cats, now: now) == nil)
+    }
+}
+
 // MARK: - SessionActions (SwiftData-backed)
 
 @MainActor

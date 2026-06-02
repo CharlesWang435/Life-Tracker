@@ -40,6 +40,10 @@ struct TodayView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     ActiveTimerBanner(activeSession: activeSessions.first)
+                    SuggestionBanner(
+                        categories: sortedCategories,
+                        activeCategoryID: activeSessions.first?.category?.id
+                    )
                     CategoryPicker(
                         categories: sortedCategories,
                         style: viewStyle,
