@@ -6,31 +6,8 @@ struct WeekBarChart: View {
     let sessions: [Session]
     var dayCount: Int = 7
 
-    private struct DayBar: Identifiable {
-        let date: Date
-        let category: LogCategory
-        let hours: Double
-        var id: String { "\(date.timeIntervalSince1970)-\(category.id)" }
-    }
-
-    private var bars: [DayBar] {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: .now)
-        let days = (0..<dayCount).compactMap {
-            calendar.date(byAdding: .day, value: -$0, to: today)
-        }.reversed()
-
-        return days.flatMap { day -> [DayBar] in
-            let dayEnd = calendar.endOfDay(for: day)
-            let daySessions = sessions.filter { $0.startDate >= day && $0.startDate < dayEnd }
-            let byCategory = Dictionary(grouping: daySessions, by: { $0.category?.id })
-            return byCategory.compactMap { _, items -> DayBar? in
-                guard let cat = items.first?.category else { return nil }
-                let total = items.reduce(0.0) { $0 + $1.elapsed() }
-                guard total > 0 else { return nil }
-                return DayBar(date: day, category: cat, hours: total / 3600)
-            }
-        }
+    private var bars: [DailyCategoryTotal] {
+        SessionAggregates.dailyCategoryTotals(sessions, days: dayCount)
     }
 
     var body: some View {
@@ -40,8 +17,8 @@ struct WeekBarChart: View {
                     .font(.headline)
                 Chart(bars) { bar in
                     BarMark(
-                        x: .value("Day", bar.date, unit: .day),
-                        y: .value("Hours", bar.hours)
+                        x: .value("Day", bar.day, unit: .day),
+                        y: .value("Hours", bar.duration / 3600)
                     )
                     .foregroundStyle(Color(hex: bar.category.colorHex))
                     .cornerRadius(3)

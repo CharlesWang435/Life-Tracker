@@ -6,22 +6,7 @@ struct TodayDonutChart: View {
     let sessions: [Session]
     var title: String = "Breakdown"
 
-    private struct Slice: Identifiable {
-        let category: LogCategory
-        let duration: TimeInterval
-        var id: UUID { category.id }
-    }
-
-    private var slices: [Slice] {
-        let groups = Dictionary(grouping: sessions, by: { $0.category?.id })
-        return groups.compactMap { _, items -> Slice? in
-            guard let category = items.first?.category else { return nil }
-            let total = items.reduce(0.0) { $0 + $1.elapsed() }
-            guard total > 0 else { return nil }
-            return Slice(category: category, duration: total)
-        }
-        .sorted { $0.duration > $1.duration }
-    }
+    private var slices: [CategoryTotal] { SessionAggregates.categoryTotals(sessions) }
 
     private var total: TimeInterval { slices.reduce(0.0) { $0 + $1.duration } }
 

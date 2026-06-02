@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		E97DB0172FCA053F008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E97DB0162FCA053F008C2256 /* LifeTrackerCore */; };
-		E9C00A012FCB100A008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E9C00A022FCB100A008C2256 /* LifeTrackerCore */; };
-		E9C00A032FCB100A008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E9C00A042FCB100A008C2256 /* LifeTrackerCore */; };
 		E9B90F902FCA0BBA003E44F1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F8F2FCA0BBA003E44F1 /* WidgetKit.framework */; };
 		E9B90F922FCA0BBA003E44F1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F912FCA0BBA003E44F1 /* SwiftUI.framework */; };
 		E9B90FA32FCA0BBB003E44F1 /* Tempo WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9B90F8D2FCA0BBA003E44F1 /* Tempo WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E9C00A012FCB100A008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E9C00A022FCB100A008C2256 /* LifeTrackerCore */; };
+		E9C00A032FCB100A008C2256 /* LifeTrackerCore in Frameworks */ = {isa = PBXBuildFile; productRef = E9C00A042FCB100A008C2256 /* LifeTrackerCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -22,6 +22,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = E9B90F8C2FCA0BBA003E44F1;
 			remoteInfo = "Tempo WidgetExtension";
+		};
+		E9B911592FCF4139003E44F1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E97DAFFD2FC8CA73008C2256 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E97DB0042FC8CA73008C2256;
+			remoteInfo = Tempo;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -47,6 +54,7 @@
 		E9B90F912FCA0BBA003E44F1 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		E9B90FAA2FCA13A6003E44F1 /* Tempo Watch App Watch App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Tempo Watch App Watch App.entitlements"; sourceTree = "<group>"; };
 		E9B90FAB2FCA13DA003E44F1 /* Tempo WidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Tempo WidgetExtension.entitlements"; sourceTree = "<group>"; };
+		E9B911552FCF4139003E44F1 /* TempoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TempoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -78,6 +86,11 @@
 			path = "Tempo Widget";
 			sourceTree = "<group>";
 		};
+		E9B911562FCF4139003E44F1 /* TempoTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TempoTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -107,6 +120,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E9B911522FCF4139003E44F1 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -118,6 +138,7 @@
 				E97DB0072FC8CA73008C2256 /* Tempo */,
 				E9B90F7F2FCA08FB003E44F1 /* Tempo Watch App */,
 				E9B90F932FCA0BBA003E44F1 /* Tempo Widget */,
+				E9B911562FCF4139003E44F1 /* TempoTests */,
 				E9B90F8E2FCA0BBA003E44F1 /* Frameworks */,
 				E97DB0062FC8CA73008C2256 /* Products */,
 			);
@@ -129,6 +150,7 @@
 				E97DB0052FC8CA73008C2256 /* Tempo.app */,
 				E9B90F7E2FCA08FB003E44F1 /* Tempo Watch App Watch App.app */,
 				E9B90F8D2FCA0BBA003E44F1 /* Tempo WidgetExtension.appex */,
+				E9B911552FCF4139003E44F1 /* TempoTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -216,6 +238,29 @@
 			productReference = E9B90F8D2FCA0BBA003E44F1 /* Tempo WidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		E9B911542FCF4139003E44F1 /* TempoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = E9B9115D2FCF4139003E44F1 /* Build configuration list for PBXNativeTarget "TempoTests" */;
+			buildPhases = (
+				E9B911512FCF4139003E44F1 /* Sources */,
+				E9B911522FCF4139003E44F1 /* Frameworks */,
+				E9B911532FCF4139003E44F1 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E9B9115A2FCF4139003E44F1 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				E9B911562FCF4139003E44F1 /* TempoTests */,
+			);
+			name = TempoTests;
+			packageProductDependencies = (
+			);
+			productName = TempoTests;
+			productReference = E9B911552FCF4139003E44F1 /* TempoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -234,6 +279,10 @@
 					};
 					E9B90F8C2FCA0BBA003E44F1 = {
 						CreatedOnToolsVersion = 26.5;
+					};
+					E9B911542FCF4139003E44F1 = {
+						CreatedOnToolsVersion = 26.5;
+						TestTargetID = E97DB0042FC8CA73008C2256;
 					};
 				};
 			};
@@ -257,6 +306,7 @@
 				E97DB0042FC8CA73008C2256 /* Tempo */,
 				E9B90F7D2FCA08FB003E44F1 /* Tempo Watch App Watch App */,
 				E9B90F8C2FCA0BBA003E44F1 /* Tempo WidgetExtension */,
+				E9B911542FCF4139003E44F1 /* TempoTests */,
 			);
 		};
 /* End PBXProject section */
@@ -277,6 +327,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		E9B90F8B2FCA0BBA003E44F1 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E9B911532FCF4139003E44F1 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -307,6 +364,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		E9B911512FCF4139003E44F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -314,6 +378,11 @@
 			isa = PBXTargetDependency;
 			target = E9B90F8C2FCA0BBA003E44F1 /* Tempo WidgetExtension */;
 			targetProxy = E9B90FA12FCA0BBB003E44F1 /* PBXContainerItemProxy */;
+		};
+		E9B9115A2FCF4139003E44F1 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E97DB0042FC8CA73008C2256 /* Tempo */;
+			targetProxy = E9B911592FCF4139003E44F1 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -516,13 +585,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tempo Watch App";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.charleswang.Tempo;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = .watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswang.Tempo.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -550,13 +619,13 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Tempo Watch App";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = "";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.charleswang.Tempo;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = .watchkitapp;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswang.Tempo.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
@@ -633,6 +702,46 @@
 			};
 			name = Release;
 		};
+		E9B9115B2FCF4139003E44F1 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswang.Tempo.TempoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tempo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tempo";
+			};
+			name = Debug;
+		};
+		E9B9115C2FCF4139003E44F1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.charleswang.Tempo.TempoTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tempo.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Tempo";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -668,6 +777,15 @@
 			buildConfigurations = (
 				E9B90FA62FCA0BBB003E44F1 /* Debug */,
 				E9B90FA72FCA0BBB003E44F1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E9B9115D2FCF4139003E44F1 /* Build configuration list for PBXNativeTarget "TempoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				E9B9115B2FCF4139003E44F1 /* Debug */,
+				E9B9115C2FCF4139003E44F1 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
