@@ -1,6 +1,9 @@
 import Foundation
 import SwiftData
 import OSLog
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 private let log = Logger(subsystem: "com.charleswang.lifetracker", category: "SessionActions")
 
@@ -29,6 +32,7 @@ public enum SessionActions {
         let session = Session(startDate: date, category: category)
         context.insert(session)
         save(context)
+        reloadWidgets()
         return session
     }
 
@@ -37,12 +41,22 @@ public enum SessionActions {
         guard let active = fetchActive(in: context) else { return }
         active.endDate = date
         save(context)
+        reloadWidgets()
     }
 
     @MainActor
     public static func delete(_ session: Session, in context: ModelContext) {
         context.delete(session)
         save(context)
+        reloadWidgets()
+    }
+
+    /// Nudge WidgetKit so watch complications / Smart Stack reflect the change at once.
+    /// No-op on platforms without WidgetKit.
+    static func reloadWidgets() {
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
     }
 
     /// Centralised save so we don't sprinkle `try?` across the codebase.
