@@ -46,9 +46,13 @@ public enum SessionActions {
 
     @MainActor
     public static func delete(_ session: Session, in context: ModelContext) {
+        let id = session.id
         context.delete(session)
         save(context)
         reloadWidgets()
+        #if canImport(WatchConnectivity)
+        ConnectivityService.shared.broadcastDeletes(sessionIDs: [id])
+        #endif
     }
 
     /// Nudge WidgetKit so watch complications / Smart Stack reflect the change at once.
@@ -68,5 +72,11 @@ public enum SessionActions {
         } catch {
             log.error("ModelContext.save failed: \(error.localizedDescription)")
         }
+        // Mirror the new state to the paired device. No-op until connectivity is
+        // started/activated, and never called by SyncMerger (which saves directly),
+        // so applying a remote change can't loop back out.
+        #if canImport(WatchConnectivity)
+        ConnectivityService.shared.broadcastState(from: context)
+        #endif
     }
 }

@@ -104,8 +104,7 @@ struct CategoryEditorView: View {
 
     private func deleteCategory() {
         if let category {
-            context.delete(category)
-            try? context.save()
+            CategoryActions.delete(category, in: context)
         }
         dismiss()
     }

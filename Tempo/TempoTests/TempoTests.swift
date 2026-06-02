@@ -259,6 +259,85 @@ struct TimerSuggesterTests {
     }
 }
 
+// MARK: - Sync merge (WatchConnectivity payloads)
+
+@MainActor
+@Suite("SyncMerger")
+struct SyncMergerTests {
+
+    private func makeContext() throws -> ModelContext {
+        let container = try TempoModelContainer.makePreview()
+        return ModelContext(container)
+    }
+
+    private func sampleCategory(id: UUID = UUID(), name: String = "Work") -> LogCategory {
+        LogCategory(id: id, name: name, colorHex: "#FF6B6B", sfSymbol: "laptopcomputer", sortOrder: 0)
+    }
+
+    @Test("upsert inserts a category and a session linked to it")
+    func upsertInserts() throws {
+        let context = try makeContext()
+        let cat = sampleCategory()
+        let session = Session(startDate: Date(timeIntervalSince1970: 1_000), category: cat)
+        let payload = SyncPayload(
+            categories: [CategoryDTO(from: cat)],
+            sessions: [SessionDTO(from: session)]
+        )
+
+        SyncMerger.apply(payload, to: context)
+
+        let categories = try context.fetch(FetchDescriptor<LogCategory>())
+        let sessions = try context.fetch(FetchDescriptor<Session>())
+        #expect(categories.count == 1)
+        #expect(sessions.count == 1)
+        #expect(sessions.first?.category?.id == cat.id)   // link resolved by id
+    }
+
+    @Test("upsert updates an existing record in place rather than duplicating")
+    func upsertUpdates() throws {
+        let context = try makeContext()
+        let id = UUID()
+        SyncMerger.apply(SyncPayload(categories: [CategoryDTO(from: sampleCategory(id: id, name: "Work"))]), to: context)
+        SyncMerger.apply(SyncPayload(categories: [CategoryDTO(from: sampleCategory(id: id, name: "Deep Work"))]), to: context)
+
+        let categories = try context.fetch(FetchDescriptor<LogCategory>())
+        #expect(categories.count == 1)
+        #expect(categories.first?.name == "Deep Work")
+    }
+
+    @Test("deleting a category cascades to its sessions")
+    func deleteCategoryCascades() throws {
+        let context = try makeContext()
+        let cat = sampleCategory()
+        let session = Session(startDate: Date(timeIntervalSince1970: 1_000), category: cat)
+        SyncMerger.apply(
+            SyncPayload(categories: [CategoryDTO(from: cat)], sessions: [SessionDTO(from: session)]),
+            to: context
+        )
+
+        SyncMerger.apply(SyncPayload(deletedCategoryIDs: [cat.id]), to: context)
+
+        #expect(try context.fetch(FetchDescriptor<LogCategory>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<Session>()).isEmpty)   // cascaded
+    }
+
+    @Test("deleting a session leaves its category intact")
+    func deleteSessionKeepsCategory() throws {
+        let context = try makeContext()
+        let cat = sampleCategory()
+        let session = Session(startDate: Date(timeIntervalSince1970: 1_000), category: cat)
+        SyncMerger.apply(
+            SyncPayload(categories: [CategoryDTO(from: cat)], sessions: [SessionDTO(from: session)]),
+            to: context
+        )
+
+        SyncMerger.apply(SyncPayload(deletedSessionIDs: [session.id]), to: context)
+
+        #expect(try context.fetch(FetchDescriptor<Session>()).isEmpty)
+        #expect(try context.fetch(FetchDescriptor<LogCategory>()).count == 1)
+    }
+}
+
 // MARK: - SessionActions (SwiftData-backed)
 
 @MainActor

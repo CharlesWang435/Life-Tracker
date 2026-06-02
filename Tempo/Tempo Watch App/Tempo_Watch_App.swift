@@ -27,6 +27,7 @@ struct Tempo_Watch_App_Watch_AppApp: App {
                 .task {
                     // Seed defaults if the watch happens to launch before the phone ever has.
                     DefaultCategories.seedIfNeeded(in: sharedContainer.mainContext)
+                    ConnectivityService.shared.start(container: sharedContainer)
                 }
         }
         .modelContainer(sharedContainer)

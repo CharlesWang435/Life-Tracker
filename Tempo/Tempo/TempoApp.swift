@@ -19,6 +19,7 @@ struct TempoApp: App {
             ContentView()
                 .task {
                     DefaultCategories.seedIfNeeded(in: sharedContainer.mainContext)
+                    ConnectivityService.shared.start(container: sharedContainer)
                 }
         }
         .modelContainer(sharedContainer)

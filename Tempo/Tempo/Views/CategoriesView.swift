@@ -57,8 +57,7 @@ struct CategoriesView: View {
 
     private func delete(at offsets: IndexSet) {
         for offset in offsets {
-            context.delete(categories[offset])
+            CategoryActions.delete(categories[offset], in: context)
         }
-        SessionActions.save(context)
     }
 }
