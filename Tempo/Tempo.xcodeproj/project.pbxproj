@@ -11,6 +11,7 @@
 		E9B90F902FCA0BBA003E44F1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F8F2FCA0BBA003E44F1 /* WidgetKit.framework */; };
 		E9B90F922FCA0BBA003E44F1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F912FCA0BBA003E44F1 /* SwiftUI.framework */; };
 		E9B90FA32FCA0BBB003E44F1 /* Tempo WidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9B90F8D2FCA0BBA003E44F1 /* Tempo WidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E9B9120000000000000000A1 /* Tempo Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = E9B90F7E2FCA08FB003E44F1 /* Tempo Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		E9B911D72FCF65D2003E44F1 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F8F2FCA0BBA003E44F1 /* WidgetKit.framework */; };
 		E9B911D82FCF65D2003E44F1 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E9B90F912FCA0BBA003E44F1 /* SwiftUI.framework */; };
 		E9B911E52FCF65D2003E44F1 /* TempoWatchWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E9B911D62FCF65D2003E44F1 /* TempoWatchWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -20,6 +21,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		E9B9120000000000000000A4 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = E97DAFFD2FC8CA73008C2256 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = E9B90F7D2FCA08FB003E44F1;
+			remoteInfo = "Tempo Watch App Watch App";
+		};
 		E9B90FA12FCA0BBB003E44F1 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = E97DAFFD2FC8CA73008C2256 /* Project object */;
@@ -44,6 +52,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		E9B9120000000000000000A2 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				E9B9120000000000000000A1 /* Tempo Watch App Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		E9B90FA82FCA0BBB003E44F1 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -227,11 +246,13 @@
 				E97DB0022FC8CA73008C2256 /* Frameworks */,
 				E97DB0032FC8CA73008C2256 /* Resources */,
 				E9B90FA82FCA0BBB003E44F1 /* Embed Foundation Extensions */,
+				E9B9120000000000000000A2 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				E9B90FA22FCA0BBB003E44F1 /* PBXTargetDependency */,
+				E9B9120000000000000000A3 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				E97DB0072FC8CA73008C2256 /* Tempo */,
@@ -469,6 +490,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		E9B9120000000000000000A3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = E9B90F7D2FCA08FB003E44F1 /* Tempo Watch App Watch App */;
+			targetProxy = E9B9120000000000000000A4 /* PBXContainerItemProxy */;
+		};
 		E9B90FA22FCA0BBB003E44F1 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = E9B90F8C2FCA0BBA003E44F1 /* Tempo WidgetExtension */;

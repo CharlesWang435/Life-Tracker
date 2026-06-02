@@ -42,7 +42,10 @@ public final class ConnectivityService: NSObject {
     /// Push the whole store as the latest application context (upserts only).
     @MainActor
     public func broadcastState(from context: ModelContext) {
-        guard isActivated else { return }
+        guard isActivated else {
+            log.notice("broadcastState skipped: WCSession not activated")
+            return
+        }
         send(applicationContext: SyncPayload.fullState(from: context))
     }
 
@@ -63,6 +66,7 @@ public final class ConnectivityService: NSObject {
         guard let data = try? encoder.encode(payload) else { return }
         do {
             try WCSession.default.updateApplicationContext(["syncState": data])
+            log.notice("→ sent appContext: \(payload.categories.count) cats, \(payload.sessions.count) sessions")
         } catch {
             log.error("updateApplicationContext failed: \(error.localizedDescription)")
         }
@@ -71,7 +75,11 @@ public final class ConnectivityService: NSObject {
     // MARK: Incoming
 
     private func apply(_ data: Data) {
-        guard let payload = try? decoder.decode(SyncPayload.self, from: data) else { return }
+        guard let payload = try? decoder.decode(SyncPayload.self, from: data) else {
+            log.error("failed to decode incoming sync payload")
+            return
+        }
+        log.notice("applying payload: \(payload.categories.count) cats, \(payload.sessions.count) sessions, deletes \(payload.deletedCategoryIDs.count)c/\(payload.deletedSessionIDs.count)s")
         let container = self.container
         Task { @MainActor in
             guard let container else { return }
@@ -87,6 +95,11 @@ extension ConnectivityService: WCSessionDelegate {
         error: Error?
     ) {
         if let error { log.error("WCSession activation: \(error.localizedDescription)") }
+        #if os(iOS)
+        log.notice("WC activated: state=\(activationState.rawValue) paired=\(session.isPaired) watchAppInstalled=\(session.isWatchAppInstalled) reachable=\(session.isReachable)")
+        #else
+        log.notice("WC activated: state=\(activationState.rawValue) companionInstalled=\(session.isCompanionAppInstalled) reachable=\(session.isReachable)")
+        #endif
         // Publish our current state so the peer catches up immediately.
         let container = self.container
         Task { @MainActor in
@@ -96,10 +109,12 @@ extension ConnectivityService: WCSessionDelegate {
     }
 
     public func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        log.notice("← received appContext")
         if let data = applicationContext["syncState"] as? Data { apply(data) }
     }
 
     public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
+        log.notice("← received userInfo")
         if let data = userInfo["syncDelete"] as? Data { apply(data) }
     }
 
