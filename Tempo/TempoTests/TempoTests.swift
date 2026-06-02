@@ -259,6 +259,46 @@ struct TimerSuggesterTests {
     }
 }
 
+// MARK: - Suggestion store (App Group snapshot for widgets)
+
+@Suite("SuggestionStore")
+struct SuggestionStoreTests {
+
+    private func freshDefaults() -> UserDefaults {
+        UserDefaults(suiteName: "test-suggestion-\(UUID().uuidString)")!
+    }
+
+    private func snapshot(validUntil: Date) -> SuggestionSnapshot {
+        SuggestionSnapshot(
+            categoryID: UUID(), categoryName: "Work", colorHex: "#FF6B6B",
+            sfSymbol: "laptopcomputer", reason: "On now: Standup", validUntil: validUntil
+        )
+    }
+
+    @Test("write then read round-trips a still-valid suggestion")
+    func roundTrip() {
+        let defaults = freshDefaults()
+        let snap = snapshot(validUntil: Date(timeIntervalSince1970: 2_000))
+        SuggestionStore.write(snap, to: defaults)
+        #expect(SuggestionStore.read(now: Date(timeIntervalSince1970: 1_000), from: defaults) == snap)
+    }
+
+    @Test("an expired suggestion reads as nil")
+    func expired() {
+        let defaults = freshDefaults()
+        SuggestionStore.write(snapshot(validUntil: Date(timeIntervalSince1970: 1_000)), to: defaults)
+        #expect(SuggestionStore.read(now: Date(timeIntervalSince1970: 2_000), from: defaults) == nil)
+    }
+
+    @Test("writing nil clears the stored suggestion")
+    func clear() {
+        let defaults = freshDefaults()
+        SuggestionStore.write(snapshot(validUntil: Date(timeIntervalSince1970: 9_999)), to: defaults)
+        SuggestionStore.write(nil, to: defaults)
+        #expect(SuggestionStore.read(now: Date(timeIntervalSince1970: 1_000), from: defaults) == nil)
+    }
+}
+
 // MARK: - Sync merge (WatchConnectivity payloads)
 
 @MainActor

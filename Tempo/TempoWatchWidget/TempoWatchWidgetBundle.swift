@@ -12,6 +12,7 @@ import SwiftUI
 struct TempoWatchWidgetBundle: WidgetBundle {
     var body: some Widget {
         ActiveSessionWidget()
+        SuggestedTimerWidget()
         QuickStartWidget()
     }
 }

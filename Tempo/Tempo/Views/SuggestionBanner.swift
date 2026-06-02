@@ -24,7 +24,10 @@ struct SuggestionBanner: View {
     }
 
     private func refresh() {
-        suggestion = service.suggestion(categories: categories)
+        let result = service.suggestion(categories: categories)
+        suggestion = result
+        // Mirror to the App Group + push to the watch so its Smart Stack can show it.
+        ConnectivityService.shared.broadcastSuggestion(result.map(SuggestionSnapshot.init(from:)))
     }
 
     private var enablePrompt: some View {

@@ -1,6 +1,9 @@
 import Foundation
 import SwiftData
 import OSLog
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 #if canImport(WatchConnectivity)
 import WatchConnectivity
@@ -24,6 +27,9 @@ public final class ConnectivityService: NSObject {
 
     /// Set once at startup before any delegate callback can fire; ModelContainer is Sendable.
     nonisolated(unsafe) private var container: ModelContainer?
+
+    /// Last suggestion we broadcast, to avoid resending unchanged ones.
+    nonisolated(unsafe) private var lastSuggestion: SuggestionSnapshot?
 
     private override init() { super.init() }
 
@@ -56,6 +62,20 @@ public final class ConnectivityService: NSObject {
         let payload = SyncPayload(deletedCategoryIDs: categoryIDs, deletedSessionIDs: sessionIDs)
         guard let data = try? encoder.encode(payload) else { return }
         WCSession.default.transferUserInfo(["syncDelete": data])
+    }
+
+    /// Persist the current timer suggestion locally and push it to the peer.
+    /// Skips the network send when the suggestion is unchanged.
+    @MainActor
+    public func broadcastSuggestion(_ snapshot: SuggestionSnapshot?) {
+        guard snapshot != lastSuggestion else { return }
+        lastSuggestion = snapshot
+        SuggestionStore.write(snapshot)
+        #if canImport(WidgetKit)
+        WidgetCenter.shared.reloadAllTimelines()
+        #endif
+        guard isActivated, let data = try? encoder.encode(SuggestionEnvelope(snapshot: snapshot)) else { return }
+        WCSession.default.transferUserInfo(["suggestion": data])
     }
 
     private var isActivated: Bool {
@@ -116,6 +136,13 @@ extension ConnectivityService: WCSessionDelegate {
     public func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
         log.debug("← received userInfo")
         if let data = userInfo["syncDelete"] as? Data { apply(data) }
+        if let data = userInfo["suggestion"] as? Data,
+           let envelope = try? decoder.decode(SuggestionEnvelope.self, from: data) {
+            SuggestionStore.write(envelope.snapshot)
+            #if canImport(WidgetKit)
+            WidgetCenter.shared.reloadAllTimelines()
+            #endif
+        }
     }
 
     #if os(iOS)
