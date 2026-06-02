@@ -32,35 +32,47 @@ private struct TimerTab: View {
     @Query(filter: #Predicate<Session> { $0.endDate == nil })
     private var activeSessions: [Session]
 
+    @State private var lastTapID = UUID()
+
     private var activeSession: Session? { activeSessions.first }
+
+    // ~3 icons per row on a 46mm watch, fewer on smaller models.
+    private let columns = [GridItem(.adaptive(minimum: 52), spacing: 8)]
+
+    private func handleTap(_ category: LogCategory) {
+        lastTapID = UUID()
+        if activeSession?.category?.id == category.id {
+            SessionActions.stopActive(in: context)
+        } else {
+            SessionActions.start(category: category, in: context)
+        }
+    }
 
     var body: some View {
         NavigationStack {
-            List {
-                if let session = activeSession, let category = session.category {
-                    Section {
+            ScrollView {
+                VStack(spacing: 10) {
+                    if let session = activeSession, let category = session.category {
                         ActiveTimerRow(session: session, category: category) {
                             SessionActions.stopActive(in: context)
                         }
                     }
-                }
 
-                Section(activeSession == nil ? "Start a timer" : "Switch to") {
-                    ForEach(categories) { category in
-                        CategoryButton(
-                            category: category,
-                            isActive: activeSession?.category?.id == category.id
-                        ) {
-                            if activeSession?.category?.id == category.id {
-                                SessionActions.stopActive(in: context)
-                            } else {
-                                SessionActions.start(category: category, in: context)
+                    LazyVGrid(columns: columns, spacing: 10) {
+                        ForEach(categories) { category in
+                            CategoryIcon(
+                                category: category,
+                                isActive: activeSession?.category?.id == category.id
+                            ) {
+                                handleTap(category)
                             }
                         }
                     }
                 }
+                .padding(.horizontal, 2)
             }
             .navigationTitle("Tempo")
+            .sensoryFeedback(.impact(weight: .medium), trigger: lastTapID)
         }
     }
 }
@@ -103,28 +115,37 @@ private struct ActiveTimerRow: View {
     }
 }
 
-/// A tappable category row used to start (or switch to) a timer.
-private struct CategoryButton: View {
+/// A compact circular icon button used to start (or switch to) a timer.
+/// Sized so several fit per row without scrolling.
+private struct CategoryIcon: View {
     let category: LogCategory
     let isActive: Bool
     let onTap: () -> Void
 
+    private var color: Color { Color(hex: category.colorHex) }
+
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 10) {
+            VStack(spacing: 3) {
                 Image(systemName: category.sfSymbol)
                     .font(.body)
-                    .foregroundStyle(Color(hex: category.colorHex))
-                    .frame(width: 28)
+                    .foregroundStyle(isActive ? .white : color)
+                    .frame(width: 46, height: 46)
+                    .background(isActive ? color : color.opacity(0.18))
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(isActive ? color : .clear, lineWidth: 2)
+                            .padding(-2)
+                    )
                 Text(category.name)
+                    .font(.system(size: 9))
                     .lineLimit(1)
-                Spacer()
-                if isActive {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(Color(hex: category.colorHex))
-                }
+                    .foregroundStyle(.secondary)
             }
+            .frame(maxWidth: .infinity)
         }
+        .buttonStyle(.plain)
     }
 }
 
