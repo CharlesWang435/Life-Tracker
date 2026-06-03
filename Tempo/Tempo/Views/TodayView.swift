@@ -71,6 +71,16 @@ struct TodayView: View {
     /// Every untracked hole in today's timeline (for the whole-day review).
     private var dayGaps: [UntrackedGap] { CaptureQuality.allGaps(sessions: todaySessions) }
 
+    /// Which conditional cards are currently shown — changing this animates them in/out.
+    private var cardSignature: [Bool] {
+        [longRunning != nil,
+         gap != nil,
+         !isReflectedToday && isPastReflectionTime,
+         isReflectedToday,
+         !dayGaps.isEmpty,
+         GoalRingsView.hasGoals(in: allCategories)]
+    }
+
     /// Active session + elapsed when it's run long enough to nudge (unless dismissed).
     private var longRunning: (session: Session, elapsed: TimeInterval)? {
         guard let active = activeSessions.first,
@@ -94,6 +104,7 @@ struct TodayView: View {
                     if let lr = longRunning {
                         LongRunningNudge(session: lr.session, elapsed: lr.elapsed,
                                          onDismiss: { dismissedNudgeID = lr.session.id })
+                            .transition(.opacity)
                     }
                     if let gap {
                         GapBackfillCard(
@@ -101,9 +112,11 @@ struct TodayView: View {
                             categories: GapSuggester.ranked(categories: sortedCategories, history: allSessions, gap: gap),
                             onDismiss: { dismissedGapStart = gap.start }
                         )
+                        .transition(.opacity)
                     }
                     if !isReflectedToday && isPastReflectionTime {
                         ReflectionCard()
+                            .transition(.opacity)
                     }
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
@@ -172,6 +185,7 @@ struct TodayView: View {
                         }
                         .buttonStyle(.plain)
                         .tint(.orange)
+                        .transition(.opacity)
                     }
                     TodayDonutChart(sessions: todaySessions, title: "Today's breakdown")
                     CategoryTotals(sessions: todaySessions)
@@ -179,9 +193,11 @@ struct TodayView: View {
                     // Once reflected, the card lives at the bottom — done, but still editable.
                     if isReflectedToday {
                         ReflectionCard()
+                            .transition(.opacity)
                     }
                 }
                 .padding()
+                .animation(.smooth, value: cardSignature)
             }
             .navigationTitle("Today")
             .toolbar {

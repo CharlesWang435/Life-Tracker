@@ -20,13 +20,14 @@ struct DurationFormatTests {
     func formattedShortTiers() {
         #expect(TimeInterval(5).formattedShort == "5s")
         #expect(TimeInterval(65).formattedShort == "1m 5s")
-        #expect(TimeInterval(3_600).formattedShort == "1h 0m")
+        #expect(TimeInterval(3_600).formattedShort == "1h")        // exact hour drops "0m"
         #expect(TimeInterval(5_025).formattedShort == "1h 23m")   // 1h 23m 45s -> drops seconds
+        #expect(TimeInterval(1_500).formattedShort == "25m")       // exact minutes drops "0s"
     }
 
     @Test("formattedShort rounds fractional seconds")
     func formattedShortRounds() {
-        #expect(TimeInterval(59.6).formattedShort == "1m 0s")     // rounds up to 60
+        #expect(TimeInterval(59.6).formattedShort == "1m")        // rounds up to 60 -> "1m"
         #expect(TimeInterval(0.4).formattedShort == "0s")
     }
 
