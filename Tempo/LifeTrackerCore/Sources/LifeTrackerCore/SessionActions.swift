@@ -36,6 +36,23 @@ public enum SessionActions {
         return session
     }
 
+    /// Insert a completed session spanning [start, end] — used for gap backfill and manual
+    /// entry. Does not touch the active timer.
+    @MainActor
+    @discardableResult
+    public static func addCompleted(
+        category: LogCategory,
+        start: Date,
+        end: Date,
+        in context: ModelContext
+    ) -> Session {
+        let session = Session(startDate: start, endDate: end, category: category)
+        context.insert(session)
+        save(context)
+        reloadWidgets()
+        return session
+    }
+
     @MainActor
     public static func stopActive(in context: ModelContext, at date: Date = .now) {
         guard let active = fetchActive(in: context) else { return }

@@ -489,3 +489,581 @@ struct DefaultCategoriesTests {
         #expect(count == DefaultCategories.seeds.count)
     }
 }
+
+// MARK: - Reflection streak (Phase 4A)
+
+@Suite("ReflectionStreak")
+struct ReflectionStreakTests {
+
+    /// Gregorian calendar pinned to a fixed zone so day boundaries are deterministic.
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        return cal
+    }
+
+    private func day(_ d: Int) -> Date {
+        DateComponents(calendar: calendar, year: 2026, month: 6, day: d, hour: 12).date!
+    }
+
+    @Test("no reflected days yields a zero streak")
+    func emptyIsZero() {
+        #expect(ReflectionStreak.current(reflectedDays: [], today: day(2), calendar: calendar) == 0)
+    }
+
+    @Test("reflected today only is a one-day streak")
+    func todayOnly() {
+        let streak = ReflectionStreak.current(reflectedDays: [day(2)], today: day(2), calendar: calendar)
+        #expect(streak == 1)
+    }
+
+    @Test("multiple timestamps on the same day still count as one")
+    func sameDayDeduped() {
+        let morning = DateComponents(calendar: calendar, year: 2026, month: 6, day: 2, hour: 8).date!
+        let evening = DateComponents(calendar: calendar, year: 2026, month: 6, day: 2, hour: 21).date!
+        let streak = ReflectionStreak.current(reflectedDays: [morning, evening], today: day(2), calendar: calendar)
+        #expect(streak == 1)
+    }
+
+    @Test("today plus yesterday is a two-day streak")
+    func todayAndYesterday() {
+        let streak = ReflectionStreak.current(reflectedDays: [day(1), day(2)], today: day(2), calendar: calendar)
+        #expect(streak == 2)
+    }
+
+    @Test("an unreflected today still counts a run ending yesterday")
+    func todayInProgress() {
+        // Reflected days 1 & 2; today is the 3rd and not yet reflected.
+        let streak = ReflectionStreak.current(reflectedDays: [day(1), day(2)], today: day(3), calendar: calendar)
+        #expect(streak == 2)
+    }
+
+    @Test("a gap before yesterday breaks the streak")
+    func gapBreaksStreak() {
+        // Reflected 1 and 3; today is 3. Day 2 missing -> only day 3 counts.
+        let streak = ReflectionStreak.current(reflectedDays: [day(1), day(3)], today: day(3), calendar: calendar)
+        #expect(streak == 1)
+    }
+
+    @Test("a stale streak that ended two days ago reads as zero")
+    func staleStreakIsZero() {
+        // Last reflection was day 1; today is day 3 -> neither today nor yesterday.
+        let streak = ReflectionStreak.current(reflectedDays: [day(1)], today: day(3), calendar: calendar)
+        #expect(streak == 0)
+    }
+}
+
+// MARK: - Reflection time range (Phase 4A)
+
+@Suite("ReflectionTimeRange")
+struct ReflectionTimeRangeTests {
+
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        return cal
+    }
+
+    private func date(_ y: Int, _ m: Int, _ d: Int) -> Date {
+        DateComponents(calendar: calendar, year: y, month: m, day: d, hour: 12).date!
+    }
+
+    @Test("week window starts 6 days before today (7-day inclusive window)")
+    func weekStart() {
+        let now = date(2026, 6, 10)
+        let start = ReflectionTimeRange.week.startDate(now: now, calendar: calendar)
+        #expect(start == calendar.startOfDay(for: date(2026, 6, 4)))
+    }
+
+    @Test("all range has no lower bound and contains any date")
+    func allHasNoBound() {
+        let now = date(2026, 6, 10)
+        #expect(ReflectionTimeRange.all.startDate(now: now, calendar: calendar) == nil)
+        #expect(ReflectionTimeRange.all.contains(date(2000, 1, 1), now: now, calendar: calendar))
+    }
+
+    @Test("contains excludes dates before the window and includes dates inside it")
+    func containsBoundary() {
+        let now = date(2026, 6, 10)
+        // Month window: from May 10 onward.
+        #expect(ReflectionTimeRange.month.contains(date(2026, 6, 1), now: now, calendar: calendar))
+        #expect(!ReflectionTimeRange.month.contains(date(2026, 4, 1), now: now, calendar: calendar))
+    }
+
+    @Test("year window includes ~11 months ago but excludes 13 months ago")
+    func yearWindow() {
+        let now = date(2026, 6, 10)
+        #expect(ReflectionTimeRange.year.contains(date(2025, 7, 1), now: now, calendar: calendar))
+        #expect(!ReflectionTimeRange.year.contains(date(2025, 5, 1), now: now, calendar: calendar))
+    }
+}
+
+// MARK: - Generic streaks (Phase 4C)
+
+@Suite("Streak")
+struct StreakTests {
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        return cal
+    }
+    private func day(_ d: Int) -> Date {
+        DateComponents(calendar: calendar, year: 2026, month: 6, day: d, hour: 12).date!
+    }
+
+    @Test("loggedDays collapses multiple sessions on a day to one date")
+    func loggedDaysDedup() {
+        let cat = LogCategory(name: "Work", colorHex: "#FF6B6B", sfSymbol: "circle", sortOrder: 0)
+        let s1 = Session(startDate: day(2), endDate: day(2).addingTimeInterval(60), category: cat)
+        let s2 = Session(startDate: day(2).addingTimeInterval(3600), category: cat)
+        let s3 = Session(startDate: day(3), category: cat)
+        let days = Streak.loggedDays(from: [s1, s2, s3], calendar: calendar)
+        #expect(days.count == 2)
+    }
+
+    @Test("consecutive logged days form a streak; today-in-progress is forgiving")
+    func loggingStreak() {
+        #expect(Streak.current(days: [day(1), day(2), day(3)], today: day(3), calendar: calendar) == 3)
+        // today (4th) not yet logged, but 1-3 logged → still counts the run through yesterday
+        #expect(Streak.current(days: [day(1), day(2), day(3)], today: day(4), calendar: calendar) == 3)
+        // gap on day 4, today day 5 → broken
+        #expect(Streak.current(days: [day(1), day(2), day(3)], today: day(5), calendar: calendar) == 0)
+    }
+}
+
+// MARK: - Insights (Phase 4C)
+
+@Suite("InsightEngine")
+struct InsightEngineTests {
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        return cal
+    }
+    private func at(_ d: Int, _ h: Int) -> Date {
+        DateComponents(calendar: calendar, year: 2026, month: 6, day: d, hour: h).date!
+    }
+    private func cat(_ name: String) -> LogCategory {
+        LogCategory(name: name, colorHex: "#FF6B6B", sfSymbol: "circle", sortOrder: 0)
+    }
+    private func session(_ c: LogCategory, _ start: Date, minutes: Double) -> Session {
+        Session(startDate: start, endDate: start.addingTimeInterval(minutes * 60), category: c)
+    }
+
+    @Test("top category this week reflects the most-tracked category")
+    func topCategory() {
+        let now = at(3, 18)   // Wed
+        let work = cat("Work"); let gym = cat("Gym")
+        let sessions = [
+            session(work, at(1, 9), minutes: 120),
+            session(gym, at(2, 9), minutes: 30),
+            session(work, at(3, 9), minutes: 60)
+        ]
+        let insight = InsightEngine.topCategoryThisWeek(sessions, now: now, calendar: calendar)
+        #expect(insight?.title == "Most time on Work")
+    }
+
+    @Test("longest session picks the max completed session")
+    func longest() {
+        let work = cat("Work")
+        let sessions = [
+            session(work, at(1, 9), minutes: 30),
+            session(work, at(2, 9), minutes: 95)
+        ]
+        let insight = InsightEngine.longestSession(sessions, calendar: calendar)
+        #expect(insight?.title.contains("1h 35m") == true)
+    }
+
+    @Test("week-over-week reports an increase vs last week")
+    func weekOverWeek() {
+        let now = at(3, 18)   // this week started Sun May 31
+        let work = cat("Work")
+        let sessions = [
+            session(work, DateComponents(calendar: calendar, year: 2026, month: 5, day: 26, hour: 9).date!, minutes: 60), // last week
+            session(work, at(1, 9), minutes: 120)  // this week (Mon)
+        ]
+        let insight = InsightEngine.weekOverWeek(sessions, now: now, calendar: calendar)
+        #expect(insight?.detail.contains("Up") == true)
+    }
+
+    @Test("no sessions yields no insights")
+    func empty() {
+        #expect(InsightEngine.insights(sessions: [], now: at(3, 18), calendar: calendar).isEmpty)
+    }
+
+    @Test("hourLabel formats 12-hour clock")
+    func hourLabel() {
+        #expect(InsightEngine.hourLabel(0) == "12 AM")
+        #expect(InsightEngine.hourLabel(9) == "9 AM")
+        #expect(InsightEngine.hourLabel(13) == "1 PM")
+    }
+}
+
+// MARK: - Heatmap (Phase 4C)
+
+@Suite("Heatmap")
+struct HeatmapTests {
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        return cal
+    }
+    private func day(_ d: Int, _ h: Int = 9) -> Date {
+        DateComponents(calendar: calendar, year: 2026, month: 6, day: d, hour: h).date!
+    }
+
+    @Test("grid has one column per week and 7 rows each")
+    func dimensions() {
+        let grid = Heatmap.grid(sessions: [], weeks: 4, now: day(3), calendar: calendar)
+        #expect(grid.count == 4)
+        #expect(grid.allSatisfy { $0.count == 7 })
+    }
+
+    @Test("a day's total sums its sessions; future days are flagged")
+    func totalsAndFuture() {
+        let cat = LogCategory(name: "Work", colorHex: "#FF6B6B", sfSymbol: "circle", sortOrder: 0)
+        let sessions = [
+            Session(startDate: day(1), endDate: day(1).addingTimeInterval(600), category: cat),
+            Session(startDate: day(1, 14), endDate: day(1, 14).addingTimeInterval(600), category: cat)
+        ]
+        let grid = Heatmap.grid(sessions: sessions, weeks: 2, now: day(3), calendar: calendar)
+        let cells = grid.flatMap { $0 }
+        let june1 = cells.first { $0.date == calendar.startOfDay(for: day(1)) }
+        #expect(june1?.seconds == 1200)                    // both sessions summed
+        #expect(cells.contains { $0.isFuture })            // days after Jun 3 exist in the grid
+        #expect(Heatmap.maxSeconds(grid) == 1200)
+    }
+}
+
+// MARK: - Intentions (Phase 4D)
+
+@Suite("IntentionEvaluator")
+struct IntentionEvaluatorTests {
+    private func cat() -> LogCategory {
+        LogCategory(name: "Work", colorHex: "#FF6B6B", sfSymbol: "circle", sortOrder: 0)
+    }
+
+    @Test("an intended category counts as done only if time was logged on it")
+    func doneWhenLogged() {
+        let work = cat(); let gym = cat()
+        let t0 = Date(timeIntervalSince1970: 1_000)
+        let sessions = [Session(startDate: t0, endDate: t0.addingTimeInterval(600), category: work)]
+
+        let outcomes = IntentionEvaluator.outcomes(
+            intendedIDs: [work.id, gym.id], sessions: sessions, now: t0.addingTimeInterval(600)
+        )
+        #expect(outcomes.first(where: { $0.categoryID == work.id })?.done == true)
+        #expect(outcomes.first(where: { $0.categoryID == gym.id })?.done == false)
+        #expect(IntentionEvaluator.completedCount(intendedIDs: [work.id, gym.id], sessions: sessions, now: t0.addingTimeInterval(600)) == 1)
+    }
+
+    @Test("a zero-length session does not count as done")
+    func zeroLengthNotDone() {
+        let work = cat()
+        let t0 = Date(timeIntervalSince1970: 1_000)
+        let sessions = [Session(startDate: t0, endDate: t0, category: work)]
+        let outcomes = IntentionEvaluator.outcomes(intendedIDs: [work.id], sessions: sessions, now: t0)
+        #expect(outcomes.first?.done == false)
+    }
+}
+
+// MARK: - Capture quality (Phase 4E)
+
+@Suite("CaptureQuality")
+struct CaptureQualityTests {
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        return cal
+    }
+    private func at(_ h: Int, _ m: Int = 0) -> Date {
+        DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: h, minute: m).date!
+    }
+    private func cat() -> LogCategory {
+        LogCategory(name: "Work", colorHex: "#FF6B6B", sfSymbol: "circle", sortOrder: 0)
+    }
+
+    @Test("a gap is flagged when enough untracked time has passed since the last session")
+    func gapDetected() {
+        let work = cat()
+        let sessions = [Session(startDate: at(9), endDate: at(11), category: work)]   // ended 11:00
+        let gap = CaptureQuality.currentGap(sessions: sessions, now: at(13), calendar: calendar)
+        #expect(gap?.start == at(11))
+        #expect(gap?.duration == TimeInterval(2 * 3600))
+    }
+
+    @Test("no gap when the last session ended recently (under the minimum)")
+    func gapTooSmall() {
+        let work = cat()
+        let sessions = [Session(startDate: at(9), endDate: at(12, 50), category: work)]
+        #expect(CaptureQuality.currentGap(sessions: sessions, now: at(13), calendar: calendar) == nil)
+    }
+
+    @Test("no gap while a timer is running")
+    func noGapWhenActive() {
+        let work = cat()
+        let sessions = [Session(startDate: at(9), category: work)]   // active
+        #expect(CaptureQuality.currentGap(sessions: sessions, now: at(13), calendar: calendar) == nil)
+    }
+
+    @Test("allGaps finds holes between sessions and the trailing gap")
+    func allGapsBetweenAndTrailing() {
+        let work = cat()
+        let sessions = [
+            Session(startDate: at(9), endDate: at(10), category: work),
+            Session(startDate: at(11), endDate: at(12), category: work)
+        ]
+        let gaps = CaptureQuality.allGaps(sessions: sessions, now: at(13), calendar: calendar)
+        #expect(gaps.count == 2)
+        #expect(gaps[0].start == at(10) && gaps[0].end == at(11))   // between sessions
+        #expect(gaps[1].start == at(12) && gaps[1].end == at(13))   // trailing
+    }
+
+    @Test("allGaps ignores pre-first-session time and sub-minimum holes")
+    func allGapsWindowAndMinimum() {
+        let work = cat()
+        let sessions = [
+            Session(startDate: at(9), endDate: at(10), category: work),
+            Session(startDate: at(10, 10), endDate: at(11), category: work)   // 10-min hole < 30m min
+        ]
+        let gaps = CaptureQuality.allGaps(sessions: sessions, now: at(11), calendar: calendar)
+        #expect(gaps.isEmpty)   // no pre-9am gap, 10-min hole below threshold, no trailing
+    }
+
+    @Test("allGaps reports nothing while a timer is running")
+    func allGapsNoneWhenActive() {
+        let work = cat()
+        let sessions = [
+            Session(startDate: at(9), endDate: at(10), category: work),
+            Session(startDate: at(10, 45), category: work)   // active, covers to now
+        ]
+        #expect(CaptureQuality.allGaps(sessions: sessions, now: at(13), calendar: calendar).count == 1)
+        // only the 10:00–10:45 hole (45m); active session covers 10:45→now
+    }
+
+    @Test("long-running nudge fires past the threshold only")
+    func longRunning() {
+        let work = cat()
+        let active = Session(startDate: at(8), category: work)
+        #expect(CaptureQuality.longRunning(activeSession: active, now: at(10), threshold: 4 * 3600) == nil) // 2h
+        #expect(CaptureQuality.longRunning(activeSession: active, now: at(13), threshold: 4 * 3600) == TimeInterval(5 * 3600)) // 5h
+    }
+
+    @Test("splitting a gap produces consecutive intervals clamped to the gap")
+    func splitGap() {
+        let gap = UntrackedGap(start: at(9), end: at(12))   // 3h
+        let segs = CaptureQuality.segments(in: gap, durations: [3600, 3600, 3600])
+        #expect(segs.count == 3)
+        #expect(segs[0].start == at(9) && segs[0].end == at(10))
+        #expect(segs[1].start == at(10) && segs[1].end == at(11))
+        #expect(segs[2].start == at(11) && segs[2].end == at(12))
+    }
+
+    @Test("split clamps an over-long final duration and skips zero durations")
+    func splitClampsAndSkips() {
+        let gap = UntrackedGap(start: at(9), end: at(10))   // 1h
+        let segs = CaptureQuality.segments(in: gap, durations: [1800, 0, 99_999])
+        #expect(segs.count == 2)
+        #expect(segs[0].end == at(9, 30))
+        #expect(segs[1].start == at(9, 30) && segs[1].end == at(10))  // clamped to gap end
+    }
+
+    @Test("smart fill ranks the category usually done during the gap's hours first")
+    func smartFillRanking() {
+        let work = LogCategory(name: "Work", colorHex: "#1", sfSymbol: "a", sortOrder: 0)
+        let gym = LogCategory(name: "Gym", colorHex: "#2", sfSymbol: "b", sortOrder: 1)
+        // History: Work logged at 10am previously; Gym logged at 7am.
+        let history = [
+            Session(startDate: at(10), endDate: at(11), category: work),
+            Session(startDate: at(7), endDate: at(8), category: gym)
+        ]
+        let gap = UntrackedGap(start: at(10), end: at(11))   // 10–11
+        let ranked = GapSuggester.ranked(categories: [gym, work], history: history, gap: gap, calendar: calendar)
+        #expect(ranked.first?.name == "Work")
+    }
+
+    @Test("long-running nudge ignores a completed session")
+    func longRunningIgnoresCompleted() {
+        let work = cat()
+        let done = Session(startDate: at(2), endDate: at(9), category: work)   // 7h but ended
+        #expect(CaptureQuality.longRunning(activeSession: done, now: at(13)) == nil)
+    }
+}
+
+// MARK: - Goal evaluation (Phase 4B)
+
+@Suite("GoalEvaluator")
+struct GoalEvaluatorTests {
+
+    private var calendar: Calendar {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        return cal
+    }
+
+    /// A category with a goal configured.
+    private func goalCategory(
+        minutes: Int?, period: GoalPeriod = .daily, direction: GoalDirection = .atLeast
+    ) -> LogCategory {
+        let cat = LogCategory(name: "Work", colorHex: "#FF6B6B", sfSymbol: "laptopcomputer", sortOrder: 0)
+        cat.goalMinutes = minutes
+        cat.goalPeriod = period
+        cat.goalDirection = direction
+        return cat
+    }
+
+    private func session(_ category: LogCategory, _ start: Date, minutes: Double) -> Session {
+        Session(startDate: start, endDate: start.addingTimeInterval(minutes * 60), category: category)
+    }
+
+    @Test("no goal yields nil status")
+    func noGoalIsNil() {
+        let cat = goalCategory(minutes: nil)
+        #expect(GoalEvaluator.status(for: cat, sessions: []) == nil)
+    }
+
+    @Test("typed goal accessors round-trip through the raw strings")
+    func accessorsRoundTrip() {
+        let cat = goalCategory(minutes: 60, period: .weekly, direction: .atMost)
+        #expect(cat.goalPeriod == .weekly)
+        #expect(cat.goalDirection == .atMost)
+        #expect(cat.hasGoal)
+    }
+
+    @Test("a target (atLeast) is met only once spent reaches it")
+    func atLeastMet() {
+        let now = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 18).date!
+        let cat = goalCategory(minutes: 60, period: .daily, direction: .atLeast)
+        let morning = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 9).date!
+
+        let under = GoalEvaluator.status(for: cat, sessions: [session(cat, morning, minutes: 30)], now: now, calendar: calendar)!
+        #expect(!under.isMet)
+        #expect(abs(under.fraction - 0.5) < 0.0001)
+
+        let met = GoalEvaluator.status(for: cat, sessions: [session(cat, morning, minutes: 75)], now: now, calendar: calendar)!
+        #expect(met.isMet)
+        #expect(met.isOver)
+        #expect(met.clampedFraction == 1.0)
+    }
+
+    @Test("a cap (atMost) stays met until exceeded")
+    func atMostCap() {
+        let now = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 23).date!
+        let cat = goalCategory(minutes: 60, period: .daily, direction: .atMost)
+        let morning = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 9).date!
+
+        let under = GoalEvaluator.status(for: cat, sessions: [session(cat, morning, minutes: 40)], now: now, calendar: calendar)!
+        #expect(under.isMet)            // within the cap
+        #expect(!under.isOver)
+
+        let over = GoalEvaluator.status(for: cat, sessions: [session(cat, morning, minutes: 90)], now: now, calendar: calendar)!
+        #expect(!over.isMet)            // blew the cap
+        #expect(over.isOver)
+        #expect(over.overage == 30 * 60)
+    }
+
+    @Test("a session spanning midnight counts only its in-period (today) portion")
+    func dailyCountsOverlapForCrossMidnight() {
+        let now = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 8).date!
+        let cat = goalCategory(minutes: 600, period: .daily, direction: .atLeast)
+        // Active sleep session started 23:00 yesterday, still running at 08:00 today.
+        let start = DateComponents(calendar: calendar, year: 2026, month: 6, day: 2, hour: 23).date!
+        let active = Session(startDate: start, category: cat)   // endDate nil
+        let status = GoalEvaluator.status(for: cat, sessions: [active], now: now, calendar: calendar)!
+        #expect(status.spent == 8 * 3600)   // only 00:00–08:00 today counts, not the 23:00–24:00 part
+    }
+
+    @Test("daily period ignores sessions from earlier days")
+    func dailyWindowExcludesYesterday() {
+        let now = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 12).date!
+        let cat = goalCategory(minutes: 60, period: .daily)
+        let yesterday = DateComponents(calendar: calendar, year: 2026, month: 6, day: 2, hour: 12).date!
+        let today = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 9).date!
+
+        let status = GoalEvaluator.status(
+            for: cat,
+            sessions: [session(cat, yesterday, minutes: 120), session(cat, today, minutes: 20)],
+            now: now, calendar: calendar
+        )!
+        #expect(status.spent == 20 * 60)   // only today's 20m counts
+    }
+
+    @Test("weekly period sums across the week but not before it")
+    func weeklyWindow() {
+        // 2026-06-03 is a Wednesday; the gregorian week (Sun-start) began Sun 2026-05-31.
+        let now = DateComponents(calendar: calendar, year: 2026, month: 6, day: 3, hour: 12).date!
+        let cat = goalCategory(minutes: 300, period: .weekly)
+        let sunday = DateComponents(calendar: calendar, year: 2026, month: 5, day: 31, hour: 10).date!
+        let lastWeek = DateComponents(calendar: calendar, year: 2026, month: 5, day: 28, hour: 10).date!
+
+        let status = GoalEvaluator.status(
+            for: cat,
+            sessions: [session(cat, sunday, minutes: 60), session(cat, lastWeek, minutes: 999)],
+            now: now, calendar: calendar
+        )!
+        #expect(status.spent == 60 * 60)   // only this week's Sunday session
+    }
+}
+
+// MARK: - DayEntryActions (SwiftData-backed, Phase 4A)
+
+@MainActor
+@Suite("DayEntryActions")
+struct DayEntryActionsTests {
+
+    private func makeContext() throws -> ModelContext {
+        let container = try TempoModelContainer.makePreview()
+        return ModelContext(container)
+    }
+
+    @Test("entry(for:) creates one entry and reuses it on the next call")
+    func fetchOrCreateIsStable() throws {
+        let context = try makeContext()
+        let noon = Date(timeIntervalSince1970: 1_000_000)
+
+        let first = DayEntryActions.entry(for: noon, in: context)
+        let second = DayEntryActions.entry(for: noon, in: context)
+
+        #expect(first === second)                                   // same object, not a duplicate
+        #expect(try context.fetchCount(FetchDescriptor<DayEntry>()) == 1)
+    }
+
+    @Test("entry is keyed by start-of-day, so any time on a day maps to one entry")
+    func keyedByStartOfDay() throws {
+        let context = try makeContext()
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/New_York")!
+        let morning = DateComponents(calendar: cal, year: 2026, month: 6, day: 2, hour: 8).date!
+        let night = DateComponents(calendar: cal, year: 2026, month: 6, day: 2, hour: 23).date!
+
+        let a = DayEntryActions.entry(for: morning, in: context, calendar: cal)
+        let b = DayEntryActions.entry(for: night, in: context, calendar: cal)
+
+        #expect(a === b)
+        #expect(a.date == cal.startOfDay(for: morning))
+    }
+
+    @Test("saveReflection stamps reflectedAt and surfaces in reflectedDays")
+    func saveReflectionStamps() throws {
+        let context = try makeContext()
+        let when = Date(timeIntervalSince1970: 1_000_000)
+        let entry = DayEntryActions.entry(for: when, in: context)
+        #expect(!entry.isReflected)
+
+        DayEntryActions.saveReflection(entry, in: context, at: when)
+
+        #expect(entry.isReflected)
+        #expect(entry.reflectedAt == when)
+        #expect(DayEntryActions.reflectedDays(in: context).count == 1)
+    }
+
+    @Test("reflectedDays excludes unreflected entries")
+    func reflectedDaysExcludesUnreflected() throws {
+        let context = try makeContext()
+        // An entry created but never reflected (e.g. opened then dismissed).
+        _ = DayEntryActions.entry(for: Date(timeIntervalSince1970: 1_000_000), in: context)
+        DayEntryActions.save(context)
+
+        #expect(DayEntryActions.reflectedDays(in: context).isEmpty)
+    }
+}
