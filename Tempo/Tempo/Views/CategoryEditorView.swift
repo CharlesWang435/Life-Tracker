@@ -15,6 +15,7 @@ struct CategoryEditorView: View {
     @State private var color: Color = .blue
     @State private var symbol: String = "tag.fill"
     @State private var showingSymbolPicker = false
+    @State private var showingDeleteConfirm = false
 
     @State private var hasGoal = false
     @State private var goalHours = 1
@@ -108,7 +109,7 @@ struct CategoryEditorView: View {
             if isEditing {
                 Section {
                     Button(role: .destructive) {
-                        deleteCategory()
+                        showingDeleteConfirm = true
                     } label: {
                         Label("Delete category", systemImage: "trash")
                     }
@@ -117,6 +118,19 @@ struct CategoryEditorView: View {
         }
         .navigationTitle(isEditing ? "Edit Category" : "New Category")
         .navigationBarTitleDisplayMode(.inline)
+        .confirmationDialog(
+            "Delete \(category?.name ?? "category")?",
+            isPresented: $showingDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) { deleteCategory() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            let count = category?.sessions.count ?? 0
+            Text(count > 0
+                 ? "This also permanently deletes \(count) logged session\(count == 1 ? "" : "s")."
+                 : "This can't be undone.")
+        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button("Save") { save() }
