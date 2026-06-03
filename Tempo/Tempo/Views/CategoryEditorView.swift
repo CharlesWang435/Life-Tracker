@@ -16,6 +16,18 @@ struct CategoryEditorView: View {
     @State private var symbol: String = "tag.fill"
     @State private var showingSymbolPicker = false
 
+    @State private var hasGoal = false
+    @State private var goalHours = 1
+    @State private var goalMins = 0
+    @State private var goalDirection: GoalDirection = .atLeast
+    @State private var goalPeriod: GoalPeriod = .daily
+
+    /// Total goal in whole minutes, floored at 5 so a goal is never effectively zero.
+    private var goalTotalMinutes: Int { max(5, goalHours * 60 + goalMins) }
+
+    /// Upper bound for the hours wheel — a day has 24h, a week 168h.
+    private var goalHourLimit: Int { goalPeriod == .daily ? 24 : 168 }
+
     private var isEditing: Bool { category != nil }
 
     var body: some View {
@@ -48,6 +60,51 @@ struct CategoryEditorView: View {
                 }
                 .buttonStyle(.plain)
             }
+            Section {
+                Toggle("Set a goal", isOn: $hasGoal.animation())
+                if hasGoal {
+                    Picker("Type", selection: $goalDirection) {
+                        Text("Target").tag(GoalDirection.atLeast)
+                        Text("Limit").tag(GoalDirection.atMost)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Picker("Period", selection: $goalPeriod) {
+                        ForEach(GoalPeriod.allCases) { period in
+                            Text(period.label).tag(period)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: goalPeriod) { _, _ in
+                        if goalHours > goalHourLimit { goalHours = goalHourLimit }
+                    }
+
+                    LabeledContent(goalDirection == .atLeast ? "At least" : "At most") {
+                        Text(goalMinutesString(TimeInterval(goalTotalMinutes * 60)))
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack(spacing: 0) {
+                        Picker("Hours", selection: $goalHours) {
+                            ForEach(0...goalHourLimit, id: \.self) { Text("\($0) h").tag($0) }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                        Picker("Minutes", selection: $goalMins) {
+                            ForEach(Array(stride(from: 0, through: 55, by: 5)), id: \.self) { Text("\($0) m").tag($0) }
+                        }
+                        .pickerStyle(.wheel)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .frame(height: 120)
+                }
+            } header: {
+                Text("Goal")
+            } footer: {
+                Text(goalDirection == .atLeast
+                     ? "A target to reach \(goalPeriod == .daily ? "each day" : "each week")."
+                     : "A cap to stay under \(goalPeriod == .daily ? "each day" : "each week").")
+            }
+
             if isEditing {
                 Section {
                     Button(role: .destructive) {
@@ -79,16 +136,24 @@ struct CategoryEditorView: View {
                 name = category.name
                 color = Color(hex: category.colorHex)
                 symbol = category.sfSymbol
+                hasGoal = category.hasGoal
+                let total = category.goalMinutes ?? 60
+                goalHours = total / 60
+                goalMins = ((total % 60) / 5) * 5   // snap to the 5-minute wheel
+                goalDirection = category.goalDirection
+                goalPeriod = category.goalPeriod
             }
         }
     }
 
     private func save() {
         let hex = color.toHex()
+        let target: LogCategory
         if let existing = category {
             existing.name = name.trimmingCharacters(in: .whitespaces)
             existing.colorHex = hex
             existing.sfSymbol = symbol
+            target = existing
         } else {
             let new = LogCategory(
                 name: name.trimmingCharacters(in: .whitespaces),
@@ -97,7 +162,11 @@ struct CategoryEditorView: View {
                 sortOrder: existingCount
             )
             context.insert(new)
+            target = new
         }
+        target.goalMinutes = hasGoal ? goalTotalMinutes : nil
+        target.goalDirection = goalDirection
+        target.goalPeriod = goalPeriod
         SessionActions.save(context)
         dismiss()
     }

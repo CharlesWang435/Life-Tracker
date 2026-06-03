@@ -8,40 +8,40 @@ struct CategoriesView: View {
     @State private var showingNewCategory = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(categories) { category in
-                    NavigationLink {
-                        CategoryEditorView(category: category)
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: category.sfSymbol)
-                                .foregroundStyle(.white)
-                                .frame(width: 32, height: 32)
-                                .background(Color(hex: category.colorHex))
-                                .clipShape(Circle())
-                            Text(category.name)
-                        }
-                    }
-                }
-                .onMove(perform: move)
-                .onDelete(perform: delete)
-            }
-            .navigationTitle("Categories")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { EditButton() }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showingNewCategory = true
-                    } label: {
-                        Image(systemName: "plus")
+        // No NavigationStack here — this screen is pushed from Settings, inheriting its stack.
+        List {
+            ForEach(categories) { category in
+                NavigationLink {
+                    CategoryEditorView(category: category)
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: category.sfSymbol)
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(Color(hex: category.colorHex))
+                            .clipShape(Circle())
+                        Text(category.name)
                     }
                 }
             }
-            .sheet(isPresented: $showingNewCategory) {
-                NavigationStack {
-                    CategoryEditorView(category: nil, existingCount: categories.count)
+            .onMove(perform: move)
+            .onDelete(perform: delete)
+        }
+        .navigationTitle("Categories")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) { EditButton() }
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showingNewCategory = true
+                } label: {
+                    Image(systemName: "plus")
                 }
+            }
+        }
+        .sheet(isPresented: $showingNewCategory) {
+            NavigationStack {
+                CategoryEditorView(category: nil, existingCount: categories.count)
             }
         }
     }
