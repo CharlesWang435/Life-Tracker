@@ -37,6 +37,9 @@ struct GoalRing: View {
                 .foregroundStyle(ringColor)
         }
         .frame(width: size, height: size)
+        .accessibilityElement()
+        .accessibilityLabel(status.direction == .atLeast ? "Goal progress" : "Limit used")
+        .accessibilityValue("\(goalMinutesString(status.spent)) of \(goalMinutesString(status.target))")
     }
 }
 

@@ -88,6 +88,7 @@ struct HomeView: View {
                         }
                     }
                     .padding()
+                    .animation(.smooth, value: reflectedToday)
                 }
             }
             .navigationTitle(greeting)
