@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import PhotosUI
 import LifeTrackerCore
 
 /// The evening reflection check-in for a single day. Shows the day's real timeline +
@@ -17,6 +18,13 @@ struct ReflectionView: View {
     @State private var note = AttributedString("")
     @State private var noteSelection = AttributedTextSelection()
     @State private var entry: DayEntry?
+
+    /// Filenames already persisted on disk that the user is keeping. Starts as the
+    /// entry's saved photos; removing a thumbnail drops it here (deleted on Save).
+    @State private var existingPhotos: [String] = []
+    /// Newly picked images not yet written to disk (written on Save, discarded on Cancel).
+    @State private var newPhotos: [UIImage] = []
+    @State private var pickerItems: [PhotosPickerItem] = []
 
     @Query private var sessions: [Session]
     @Query(sort: \LogCategory.sortOrder) private var allCategories: [LogCategory]
@@ -91,9 +99,13 @@ struct ReflectionView: View {
                         .background(Color(.secondarySystemBackground))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+
+                // 4. Photos — visual memory of the day. Stored on-device only.
+                photosSection
             }
             .padding()
         }
+        .onChange(of: pickerItems) { _, items in loadPicked(items) }
         .navigationTitle(date.formatted(.dateTime.weekday(.wide).month().day()))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -107,6 +119,79 @@ struct ReflectionView: View {
         .onAppear(perform: load)
     }
 
+    // MARK: Photos
+
+    private let photoSize: CGFloat = 88
+
+    private var photosSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Photos")
+                .font(.headline)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(existingPhotos, id: \.self) { filename in
+                        if let image = PhotoStorage.load(filename) {
+                            photoThumb(image) { existingPhotos.removeAll { $0 == filename } }
+                        }
+                    }
+                    ForEach(Array(newPhotos.enumerated()), id: \.offset) { index, image in
+                        photoThumb(image) { newPhotos.remove(at: index) }
+                    }
+                    PhotosPicker(selection: $pickerItems, maxSelectionCount: 6, matching: .images) {
+                        VStack(spacing: 4) {
+                            Image(systemName: "photo.badge.plus")
+                                .font(.title2)
+                            Text("Add")
+                                .font(.caption)
+                        }
+                        .foregroundStyle(.secondary)
+                        .frame(width: photoSize, height: photoSize)
+                        .background(Color(.secondarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .accessibilityLabel("Add photos")
+                }
+            }
+        }
+    }
+
+    /// A square photo thumbnail with a corner remove button.
+    private func photoThumb(_ image: UIImage, onRemove: @escaping () -> Void) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFill()
+            .frame(width: photoSize, height: photoSize)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(alignment: .topTrailing) {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .black.opacity(0.5))
+                        .font(.title3)
+                }
+                .padding(4)
+                .accessibilityLabel("Remove photo")
+            }
+    }
+
+    /// Decode the picked items into in-memory images, then clear the picker selection.
+    private func loadPicked(_ items: [PhotosPickerItem]) {
+        guard !items.isEmpty else { return }
+        Task {
+            var loaded: [UIImage] = []
+            for item in items {
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    loaded.append(image)
+                }
+            }
+            await MainActor.run {
+                newPhotos.append(contentsOf: loaded)
+                pickerItems = []
+            }
+        }
+    }
+
     private func load() {
         let e = DayEntryActions.entry(for: date, in: context)
         entry = e
@@ -114,6 +199,7 @@ struct ReflectionView: View {
         energy = e.energyRating
         highlight = e.highlight ?? ""
         note = e.attributedNote
+        existingPhotos = e.photoFilenames
     }
 
     private func saveAndDismiss() {
@@ -122,6 +208,14 @@ struct ReflectionView: View {
         entry.energyRating = energy
         entry.highlight = highlight.trimmed.isEmpty ? nil : highlight.trimmed
         entry.attributedNote = note   // updates both noteData and the plain `note` mirror
+
+        // Delete files the user removed, write newly picked ones, then store the filenames.
+        for removed in entry.photoFilenames where !existingPhotos.contains(removed) {
+            PhotoStorage.delete(removed)
+        }
+        let savedNew = newPhotos.compactMap { PhotoStorage.save($0) }
+        entry.photoFilenames = existingPhotos + savedNew
+
         DayEntryActions.saveReflection(entry, in: context)
         Haptics.success()
         dismiss()
