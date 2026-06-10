@@ -486,6 +486,43 @@ struct PlaceSuggesterTests {
     }
 }
 
+// MARK: - GeofencePlanner (pure)
+
+@Suite("GeofencePlanner")
+struct GeofencePlannerTests {
+
+    private func place(_ name: String, secondsAgo: TimeInterval) -> Place {
+        Place(
+            name: name,
+            latitude: 37.0,
+            longitude: -122.0,
+            radius: 100,
+            categoryID: UUID(),
+            createdAt: Date(timeIntervalSince1970: 2_000_000_000 - secondsAgo)
+        )
+    }
+
+    @Test("maps places to regions preserving coordinates and radius")
+    func mapsFields() {
+        let p = Place(name: "Gym", latitude: 1.5, longitude: -2.5, radius: 175, categoryID: UUID())
+        let regions = GeofencePlanner.regions(for: [p])
+        #expect(regions.count == 1)
+        #expect(regions.first?.id == p.id)
+        #expect(regions.first?.latitude == 1.5)
+        #expect(regions.first?.longitude == -2.5)
+        #expect(regions.first?.radius == 175)
+    }
+
+    @Test("trims to the system limit, oldest first")
+    func trimsToLimit() {
+        let places = (0..<25).map { place("P\($0)", secondsAgo: TimeInterval(25 - $0)) } // P0 oldest
+        let regions = GeofencePlanner.regions(for: places, limit: 20)
+        #expect(regions.count == 20)
+        // Oldest place (P0) should be kept; newest five dropped.
+        #expect(regions.contains { $0.id == places.first?.id })
+    }
+}
+
 // MARK: - SessionActions (SwiftData-backed)
 
 @MainActor
