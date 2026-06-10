@@ -49,6 +49,13 @@ struct WeeklyReviewView: View {
         weekReflections.filter { ($0.highlight ?? "").isEmpty == false }
     }
 
+    /// Every photo captured in this week's reflections, newest day first.
+    private var weekPhotos: [String] {
+        weekReflections
+            .sorted { $0.date > $1.date }
+            .flatMap(\.photoFilenames)
+    }
+
     private var loggingStreak: Int { Streak.current(days: Streak.loggedDays(from: recentSessions)) }
 
     var body: some View {
@@ -86,6 +93,12 @@ struct WeeklyReviewView: View {
                                                 .font(.subheadline)
                                         }
                                     }
+                                }
+                            }
+                            if !weekPhotos.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Moments").font(.headline)
+                                    ReflectionPhotoStrip(filenames: weekPhotos, size: 120)
                                 }
                             }
                         }
