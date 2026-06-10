@@ -1,33 +1,72 @@
 import SwiftUI
+import SwiftData
 import LifeTrackerCore
 
-/// Calendar-driven suggestion shown atop the Today screen:
-/// a permission prompt until the user opts in, then a "Start X?" card when an
-/// event matches a category. Hidden when the suggested timer is already running.
+/// A timer suggestion shown atop the Today screen, drawn from two on-device signals:
+/// your calendar (an event matching a category) and your location (you've arrived at
+/// a tagged place). Shows a calendar permission prompt until you opt in; hidden when
+/// the suggested timer is already running.
+///
+/// Ranking when both fire: a calendar event happening *now* wins, then a location
+/// match ("you're here"), then an upcoming calendar event.
 struct SuggestionBanner: View {
     let categories: [LogCategory]
     let activeCategoryID: UUID?
 
     @Environment(\.modelContext) private var context
-    @State private var service = CalendarSuggestionService()
-    @State private var suggestion: TimerSuggestion?
+    @Query(sort: \Place.createdAt) private var places: [Place]
+
+    @State private var calendarService = CalendarSuggestionService()
+    @State private var location = LocationService()
+    @State private var active: ActiveSuggestion?
+
+    /// A source-agnostic suggestion the banner can render and broadcast.
+    private struct ActiveSuggestion {
+        let category: LogCategory
+        let reason: String
+        let snapshot: SuggestionSnapshot
+    }
 
     var body: some View {
         Group {
-            if service.needsPermissionPrompt {
+            if calendarService.needsPermissionPrompt {
                 enablePrompt
-            } else if let suggestion, suggestion.category.id != activeCategoryID {
-                card(for: suggestion)
+            } else if let active, active.category.id != activeCategoryID {
+                card(for: active)
             }
         }
-        .task(id: activeCategoryID) { refresh() }
+        .task(id: activeCategoryID) { await refresh() }
     }
 
-    private func refresh() {
-        let result = service.suggestion(categories: categories)
-        suggestion = result
+    private func refresh() async {
+        let calendar = calendarService.suggestion(categories: categories)
+
+        var place: PlaceSuggestion?
+        if !places.isEmpty, location.isAuthorized,
+           let coordinate = await location.requestCoordinate() {
+            place = PlaceSuggester.suggestion(at: coordinate, places: places, categories: categories)
+        }
+
+        let chosen = best(calendar: calendar, place: place)
+        active = chosen
         // Mirror to the App Group + push to the watch so its Smart Stack can show it.
-        ConnectivityService.shared.broadcastSuggestion(result.map(SuggestionSnapshot.init(from:)))
+        ConnectivityService.shared.broadcastSuggestion(chosen?.snapshot)
+    }
+
+    /// Rank the two signals: a calendar event on *now* beats a location match,
+    /// which beats an upcoming calendar event.
+    private func best(calendar: TimerSuggestion?, place: PlaceSuggestion?) -> ActiveSuggestion? {
+        if let calendar, calendar.isHappeningNow {
+            return ActiveSuggestion(category: calendar.category, reason: calendar.reason, snapshot: SuggestionSnapshot(from: calendar))
+        }
+        if let place {
+            let validUntil = Date.now.addingTimeInterval(30 * 60)
+            return ActiveSuggestion(category: place.category, reason: place.reason, snapshot: SuggestionSnapshot(from: place, validUntil: validUntil))
+        }
+        if let calendar {
+            return ActiveSuggestion(category: calendar.category, reason: calendar.reason, snapshot: SuggestionSnapshot(from: calendar))
+        }
+        return nil
     }
 
     private var enablePrompt: some View {
@@ -45,8 +84,8 @@ struct SuggestionBanner: View {
             Spacer()
             Button("Enable") {
                 Task {
-                    await service.requestAccess()
-                    refresh()
+                    await calendarService.requestAccess()
+                    await refresh()
                 }
             }
             .buttonStyle(.borderedProminent)
@@ -57,7 +96,7 @@ struct SuggestionBanner: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    private func card(for suggestion: TimerSuggestion) -> some View {
+    private func card(for suggestion: ActiveSuggestion) -> some View {
         let color = Color(hex: suggestion.category.colorHex)
         return HStack(spacing: 12) {
             Image(systemName: suggestion.category.sfSymbol)
@@ -80,7 +119,7 @@ struct SuggestionBanner: View {
 
             Button {
                 SessionActions.start(category: suggestion.category, in: context)
-                refresh()
+                Task { await refresh() }
             } label: {
                 Image(systemName: "play.fill")
                     .font(.headline)
