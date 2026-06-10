@@ -64,7 +64,7 @@ public enum SuggestionStore {
 }
 
 public extension SuggestionSnapshot {
-    /// Build a snapshot from a computed suggestion (validity = the event's end).
+    /// Build a snapshot from a calendar suggestion (validity = the event's end).
     init(from suggestion: TimerSuggestion) {
         self.init(
             categoryID: suggestion.category.id,
@@ -73,6 +73,19 @@ public extension SuggestionSnapshot {
             sfSymbol: suggestion.category.sfSymbol,
             reason: suggestion.reason,
             validUntil: suggestion.event.end
+        )
+    }
+
+    /// Build a snapshot from a location suggestion. Location has no natural end,
+    /// so the caller supplies how long the suggestion stays fresh.
+    init(from suggestion: PlaceSuggestion, validUntil: Date) {
+        self.init(
+            categoryID: suggestion.category.id,
+            categoryName: suggestion.category.name,
+            colorHex: suggestion.category.colorHex,
+            sfSymbol: suggestion.category.sfSymbol,
+            reason: suggestion.reason,
+            validUntil: validUntil
         )
     }
 }

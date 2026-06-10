@@ -430,6 +430,62 @@ struct SyncMergerTests {
     }
 }
 
+// MARK: - PlaceSuggester (pure)
+
+@Suite("PlaceSuggester")
+struct PlaceSuggesterTests {
+
+    private func category(_ id: UUID = UUID(), name: String = "Exercise") -> LogCategory {
+        LogCategory(id: id, name: name, colorHex: "#34C759", sfSymbol: "figure.run", sortOrder: 0)
+    }
+
+    // Apple Park, Cupertino, as a reference point.
+    private let applePark = GeoCoordinate(latitude: 37.3349, longitude: -122.0090)
+
+    @Test("haversine distance is ~0 for identical points and grows with separation")
+    func distanceBasics() {
+        #expect(PlaceSuggester.distance(applePark, applePark) < 0.01)
+        // ~1.11 km per 0.01° of latitude.
+        let north = GeoCoordinate(latitude: applePark.latitude + 0.01, longitude: applePark.longitude)
+        let d = PlaceSuggester.distance(applePark, north)
+        #expect(d > 1_000 && d < 1_200)
+    }
+
+    @Test("suggests the category of a place the user is inside")
+    func suggestsWhenInside() {
+        let cat = category()
+        let gym = Place(name: "Gym", latitude: applePark.latitude, longitude: applePark.longitude, radius: 150, categoryID: cat.id)
+        let result = PlaceSuggester.suggestion(at: applePark, places: [gym], categories: [cat])
+        #expect(result?.category.id == cat.id)
+        #expect(result?.placeName == "Gym")
+    }
+
+    @Test("no suggestion when outside every place's radius")
+    func noneWhenOutside() {
+        let cat = category()
+        let gym = Place(name: "Gym", latitude: applePark.latitude, longitude: applePark.longitude, radius: 100, categoryID: cat.id)
+        let faraway = GeoCoordinate(latitude: applePark.latitude + 0.02, longitude: applePark.longitude) // ~2.2 km away
+        #expect(PlaceSuggester.suggestion(at: faraway, places: [gym], categories: [cat]) == nil)
+    }
+
+    @Test("nearest matching place wins when several overlap")
+    func nearestWins() {
+        let near = category(name: "Work")
+        let far = category(name: "Study")
+        let nearPlace = Place(name: "Office", latitude: applePark.latitude, longitude: applePark.longitude, radius: 500, categoryID: near.id)
+        let farPlace = Place(name: "Library", latitude: applePark.latitude + 0.003, longitude: applePark.longitude, radius: 500, categoryID: far.id)
+        let result = PlaceSuggester.suggestion(at: applePark, places: [farPlace, nearPlace], categories: [near, far])
+        #expect(result?.category.id == near.id)
+    }
+
+    @Test("skips a place whose category was deleted")
+    func skipsDanglingCategory() {
+        let cat = category()
+        let orphan = Place(name: "Gym", latitude: applePark.latitude, longitude: applePark.longitude, radius: 150, categoryID: UUID())
+        #expect(PlaceSuggester.suggestion(at: applePark, places: [orphan], categories: [cat]) == nil)
+    }
+}
+
 // MARK: - SessionActions (SwiftData-backed)
 
 @MainActor

@@ -5,7 +5,8 @@ public enum TempoModelContainer {
     public static let schema = Schema([
         LogCategory.self,
         Session.self,
-        DayEntry.self
+        DayEntry.self,
+        Place.self
     ])
 
     /// Shared container backed by the App Group so iPhone app, Watch app, and
