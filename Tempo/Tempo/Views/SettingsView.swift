@@ -88,6 +88,7 @@ struct SettingsView: View {
                 reflectionSection
                 captureSection
                 weeklySection
+                suggestionsSection
                 aboutSection
             }
             .navigationTitle("Settings")
@@ -185,6 +186,20 @@ struct SettingsView: View {
 
     private func rescheduleWeekly() {
         WeeklyReviewNotifications.reschedule(enabled: weeklyEnabled, weekday: weeklyWeekday, hour: weeklyHour, minute: weeklyMinute)
+    }
+
+    private var suggestionsSection: some View {
+        Section {
+            NavigationLink {
+                PlacesView()
+            } label: {
+                Label("Places", systemImage: "mappin.and.ellipse")
+            }
+        } header: {
+            Text("Suggestions")
+        } footer: {
+            Text("Tag places you visit (gym, office) so Tempo can suggest their timer when you arrive.")
+        }
     }
 
     private var aboutSection: some View {

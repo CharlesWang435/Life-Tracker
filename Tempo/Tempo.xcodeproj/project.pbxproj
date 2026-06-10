@@ -644,6 +644,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Tempo reads your calendar to suggest which timer to start (e.g. an Exercise timer when you have a gym event). This stays on your device.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Tempo checks whether you've arrived at a place you've tagged (e.g. the gym) to suggest starting that timer. Your location stays on your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -678,6 +679,7 @@
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "Tempo reads your calendar to suggest which timer to start (e.g. an Exercise timer when you have a gym event). This stays on your device.";
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Tempo checks whether you've arrived at a place you've tagged (e.g. the gym) to suggest starting that timer. Your location stays on your device.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
