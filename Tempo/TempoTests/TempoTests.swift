@@ -377,6 +377,57 @@ struct SyncMergerTests {
         #expect(try context.fetch(FetchDescriptor<Session>()).isEmpty)
         #expect(try context.fetch(FetchDescriptor<LogCategory>()).count == 1)
     }
+
+    @Test("upsert inserts a day entry keyed by date")
+    func upsertDayEntryInserts() throws {
+        let context = try makeContext()
+        let day = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        let entry = DayEntry(date: day, moodRating: 4, highlight: "Shipped sync", reflectedAt: day)
+
+        SyncMerger.apply(SyncPayload(dayEntries: [DayEntryDTO(from: entry)]), to: context)
+
+        let entries = try context.fetch(FetchDescriptor<DayEntry>())
+        #expect(entries.count == 1)
+        #expect(entries.first?.highlight == "Shipped sync")
+        #expect(entries.first?.moodRating == 4)
+        #expect(entries.first?.isReflected == true)
+    }
+
+    @Test("upsert updates an existing day entry in place rather than duplicating")
+    func upsertDayEntryUpdates() throws {
+        let context = try makeContext()
+        let day = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        SyncMerger.apply(SyncPayload(dayEntries: [DayEntryDTO(from: DayEntry(date: day, moodRating: 2))]), to: context)
+        SyncMerger.apply(SyncPayload(dayEntries: [DayEntryDTO(from: DayEntry(date: day, moodRating: 5))]), to: context)
+
+        let entries = try context.fetch(FetchDescriptor<DayEntry>())
+        #expect(entries.count == 1)
+        #expect(entries.first?.moodRating == 5)
+    }
+
+    @Test("syncing a day entry never clears the peer's local photos")
+    func upsertDayEntryPreservesPhotos() throws {
+        let context = try makeContext()
+        let day = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_700_000_000))
+        // A device already has a reflection with a local photo on disk.
+        let local = DayEntry(date: day, photoFilenames: ["abc.jpg"])
+        context.insert(local)
+        try context.save()
+        // An incoming snapshot (which never carries photo filenames) updates the mood.
+        SyncMerger.apply(SyncPayload(dayEntries: [DayEntryDTO(from: DayEntry(date: day, moodRating: 3))]), to: context)
+
+        let entries = try context.fetch(FetchDescriptor<DayEntry>())
+        #expect(entries.count == 1)
+        #expect(entries.first?.moodRating == 3)
+        #expect(entries.first?.photoFilenames == ["abc.jpg"])   // untouched by sync
+    }
+
+    @Test("payloads from older peers without dayEntries still decode")
+    func decodesLegacyPayloadWithoutDayEntries() throws {
+        let legacy = #"{"categories":[],"sessions":[],"deletedCategoryIDs":[],"deletedSessionIDs":[]}"#
+        let payload = try JSONDecoder().decode(SyncPayload.self, from: Data(legacy.utf8))
+        #expect(payload.dayEntries.isEmpty)
+    }
 }
 
 // MARK: - SessionActions (SwiftData-backed)

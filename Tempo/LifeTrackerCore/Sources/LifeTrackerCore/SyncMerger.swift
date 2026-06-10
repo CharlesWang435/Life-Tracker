@@ -17,6 +17,7 @@ public enum SyncMerger {
     public static func apply(_ payload: SyncPayload, to context: ModelContext) {
         for dto in payload.categories { upsert(dto, in: context) }
         for dto in payload.sessions { upsert(dto, in: context) }
+        for dto in payload.dayEntries { upsert(dto, in: context) }
         for id in payload.deletedCategoryIDs { deleteCategory(id, in: context) }
         for id in payload.deletedSessionIDs { deleteSession(id, in: context) }
 
@@ -77,6 +78,35 @@ public enum SyncMerger {
         }
     }
 
+    /// Upsert a day entry keyed by its start-of-day `date`. Last-writer-wins on the
+    /// scalar fields, consistent with categories/sessions. `photoFilenames` is left
+    /// untouched (and defaults to empty on insert): photo files are device-local and
+    /// never transferred, so sync must not clear a peer's locally-stored photos.
+    @MainActor
+    private static func upsert(_ dto: DayEntryDTO, in context: ModelContext) {
+        if let existing = dayEntry(dto.date, in: context) {
+            existing.note = dto.note
+            existing.noteData = dto.noteData
+            existing.moodRating = dto.moodRating
+            existing.energyRating = dto.energyRating
+            existing.highlight = dto.highlight
+            existing.intendedCategoryIDs = dto.intendedCategoryIDs
+            existing.reflectedAt = dto.reflectedAt
+        } else {
+            let created = DayEntry(
+                date: dto.date,
+                note: dto.note,
+                moodRating: dto.moodRating,
+                energyRating: dto.energyRating,
+                highlight: dto.highlight,
+                intendedCategoryIDs: dto.intendedCategoryIDs,
+                reflectedAt: dto.reflectedAt
+            )
+            created.noteData = dto.noteData
+            context.insert(created)
+        }
+    }
+
     // MARK: Deletes
 
     @MainActor
@@ -106,6 +136,13 @@ public enum SyncMerger {
     @MainActor
     private static func session(_ id: UUID, in context: ModelContext) -> Session? {
         var descriptor = FetchDescriptor<Session>(predicate: #Predicate { $0.id == id })
+        descriptor.fetchLimit = 1
+        return (try? context.fetch(descriptor))?.first
+    }
+
+    @MainActor
+    private static func dayEntry(_ date: Date, in context: ModelContext) -> DayEntry? {
+        var descriptor = FetchDescriptor<DayEntry>(predicate: #Predicate { $0.date == date })
         descriptor.fetchLimit = 1
         return (try? context.fetch(descriptor))?.first
     }

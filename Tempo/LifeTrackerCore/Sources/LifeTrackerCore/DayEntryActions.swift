@@ -7,9 +7,9 @@ private let log = Logger(subsystem: "com.charleswang.lifetracker", category: "Da
 /// Mutations for `DayEntry`, mirroring `SessionActions`: `@MainActor` static methods
 /// over a single centralised `save(_:)`. Enforces one entry per calendar day.
 ///
-/// Note (v1 scope): `DayEntry` is intentionally NOT synced over WatchConnectivity yet —
-/// reflection is a phone-first ritual. When sync is added later, extend `SyncModels`
-/// with a day-keyed payload (latest `reflectedAt` wins) and apply it in `SyncMerger`.
+/// `DayEntry` is synced over WatchConnectivity via `SyncModels`/`SyncMerger` (keyed by
+/// start-of-day `date`, last-writer-wins). Photos are NOT synced — `photoFilenames`
+/// references files in each device's own documents directory, so they stay device-local.
 public enum DayEntryActions {
 
     /// Fetch the entry for `date`'s day, or create + insert a fresh one. Never returns nil.
@@ -76,5 +76,11 @@ public enum DayEntryActions {
         } catch {
             log.error("DayEntry save failed: \(error.localizedDescription)")
         }
+        // Mirror the new state to the paired device. No-op until connectivity is
+        // started/activated, and never called by SyncMerger (which saves directly),
+        // so applying a remote change can't loop back out.
+        #if canImport(WatchConnectivity)
+        ConnectivityService.shared.broadcastState(from: context)
+        #endif
     }
 }
