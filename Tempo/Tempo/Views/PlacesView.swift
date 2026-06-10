@@ -10,6 +10,7 @@ struct PlacesView: View {
     @Query(sort: \LogCategory.sortOrder) private var categories: [LogCategory]
 
     @State private var showingAdd = false
+    @State private var editingPlace: Place?
 
     var body: some View {
         List {
@@ -24,7 +25,10 @@ struct PlacesView: View {
             } else {
                 Section {
                     ForEach(places) { place in
-                        row(place)
+                        Button { editingPlace = place } label: {
+                            row(place)
+                        }
+                        .buttonStyle(.plain)
                     }
                     .onDelete(perform: delete)
                 } footer: {
@@ -44,6 +48,9 @@ struct PlacesView: View {
         }
         .sheet(isPresented: $showingAdd) {
             PlaceEditorView()
+        }
+        .sheet(item: $editingPlace) { place in
+            PlaceEditorView(place: place)
         }
     }
 
@@ -73,8 +80,11 @@ struct PlacesView: View {
     }
 }
 
-/// Add a place: capture the current location, name it, pick a category and radius.
+/// Add or edit a place: capture/keep a location, name it, pick a category and radius.
 struct PlaceEditorView: View {
+    /// The place being edited, or nil when adding a new one.
+    var place: Place?
+
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
@@ -86,6 +96,7 @@ struct PlaceEditorView: View {
     @State private var radius: Double = 120
     @State private var coordinate: GeoCoordinate?
     @State private var isLocating = false
+    @State private var didLoad = false
 
     private var canSave: Bool {
         !name.trimmingCharacters(in: .whitespaces).isEmpty && categoryID != nil && coordinate != nil
@@ -125,7 +136,7 @@ struct PlaceEditorView: View {
                     Text("Tempo saves the coordinates of where you are now. Your location never leaves your device.")
                 }
             }
-            .navigationTitle("New Place")
+            .navigationTitle(place == nil ? "New Place" : "Edit Place")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -135,10 +146,7 @@ struct PlaceEditorView: View {
                     Button("Save") { save() }.disabled(!canSave)
                 }
             }
-            .onAppear {
-                if categoryID == nil { categoryID = categories.first?.id }
-                prepareLocation()
-            }
+            .onAppear(perform: load)
             .onChange(of: location.isAuthorized) { _, authorized in
                 if authorized && coordinate == nil { capture() }
             }
@@ -172,6 +180,21 @@ struct PlaceEditorView: View {
         }
     }
 
+    /// Preload from the edited place, or set up a fresh add (default category + a fix).
+    private func load() {
+        guard !didLoad else { return }
+        didLoad = true
+        if let place {
+            name = place.name
+            categoryID = place.categoryID
+            radius = place.radius
+            coordinate = GeoCoordinate(latitude: place.latitude, longitude: place.longitude)
+        } else {
+            if categoryID == nil { categoryID = categories.first?.id }
+            prepareLocation()
+        }
+    }
+
     /// Request access if needed, then grab a fix once authorized.
     private func prepareLocation() {
         if location.needsPermissionPrompt {
@@ -194,14 +217,24 @@ struct PlaceEditorView: View {
 
     private func save() {
         guard let coordinate, let categoryID else { return }
-        PlaceActions.add(
-            name: name.trimmingCharacters(in: .whitespaces),
-            latitude: coordinate.latitude,
-            longitude: coordinate.longitude,
-            radius: radius,
-            categoryID: categoryID,
-            in: context
-        )
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        if let place {
+            place.name = trimmed
+            place.categoryID = categoryID
+            place.radius = radius
+            place.latitude = coordinate.latitude
+            place.longitude = coordinate.longitude
+            PlaceActions.save(context)
+        } else {
+            PlaceActions.add(
+                name: trimmed,
+                latitude: coordinate.latitude,
+                longitude: coordinate.longitude,
+                radius: radius,
+                categoryID: categoryID,
+                in: context
+            )
+        }
         Haptics.success()
         dismiss()
     }
