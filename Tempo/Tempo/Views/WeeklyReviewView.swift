@@ -58,6 +58,35 @@ struct WeeklyReviewView: View {
 
     private var loggingStreak: Int { Streak.current(days: Streak.loggedDays(from: recentSessions)) }
 
+    /// A shareable summary of the week: total, delta/streak, and top categories.
+    private var shareModel: SummaryShareModel {
+        let totals = SessionAggregates.categoryTotals(weekSessions)
+        let rows = totals.prefix(3).map { item in
+            SummaryShareModel.Row(
+                name: item.category.name,
+                colorHex: item.category.colorHex,
+                fraction: total > 0 ? item.duration / total : 0,
+                valueString: item.duration.formattedShort
+            )
+        }
+        var subtitleParts: [String] = []
+        if prevTotal > 0 {
+            subtitleParts.append("\(delta >= 0 ? "↑" : "↓") \(abs(delta).formattedShort) vs last week")
+        }
+        if loggingStreak > 0 {
+            subtitleParts.append("\(loggingStreak)-day streak")
+        }
+        let avgMood = moodPoints.isEmpty ? nil
+            : Int((Double(moodPoints.map(\.rating).reduce(0, +)) / Double(moodPoints.count)).rounded())
+        return SummaryShareModel(
+            title: "This Week",
+            totalString: total.formattedShort,
+            subtitle: subtitleParts.joined(separator: " · "),
+            rows: rows,
+            accentEmoji: avgMood.flatMap { ReflectionAxis.mood.emoji(for: $0) }
+        )
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -109,6 +138,11 @@ struct WeeklyReviewView: View {
             .navigationTitle("Weekly Review")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                if !weekSessions.isEmpty {
+                    ToolbarItem(placement: .topBarLeading) {
+                        SummaryShareLink(model: shareModel)
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
                 }

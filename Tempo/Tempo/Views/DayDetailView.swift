@@ -29,6 +29,29 @@ struct DayDetailView: View {
 
     private var entry: DayEntry? { dayEntries.first }
 
+    private var total: TimeInterval { SessionAggregates.grandTotal(sessions) }
+    private var hasContent: Bool { !sessions.isEmpty }
+
+    /// A shareable summary of the day: total, highlight, mood, and top categories.
+    private var shareModel: SummaryShareModel {
+        let totals = SessionAggregates.categoryTotals(sessions)
+        let rows = totals.prefix(3).map { item in
+            SummaryShareModel.Row(
+                name: item.category.name,
+                colorHex: item.category.colorHex,
+                fraction: total > 0 ? item.duration / total : 0,
+                valueString: item.duration.formattedShort
+            )
+        }
+        return SummaryShareModel(
+            title: date.formatted(.dateTime.weekday(.wide).month().day()),
+            totalString: total.formattedShort,
+            subtitle: entry?.highlight,
+            rows: rows,
+            accentEmoji: entry?.moodRating.flatMap { ReflectionAxis.mood.emoji(for: $0) }
+        )
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
@@ -45,6 +68,11 @@ struct DayDetailView: View {
         .navigationTitle(date.formatted(.dateTime.weekday(.wide).month().day()))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if hasContent {
+                ToolbarItem(placement: .topBarTrailing) {
+                    SummaryShareLink(model: shareModel)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button(entry?.isReflected == true ? "Edit" : "Reflect") {
                     showReflection = true
