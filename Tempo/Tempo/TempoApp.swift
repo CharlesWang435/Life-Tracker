@@ -18,7 +18,10 @@ struct TempoApp: App {
         }
         let router = AppRouter()
         _router = State(initialValue: router)
-        notificationDelegate = NotificationDelegate(router: router)
+        notificationDelegate = NotificationDelegate(router: router, container: sharedContainer)
+        // Wire region monitoring at launch so a background relaunch for an arrival
+        // event finds the delegate ready.
+        GeofenceService.shared.start(container: sharedContainer)
     }
 
     var body: some Scene {
@@ -34,6 +37,8 @@ struct TempoApp: App {
                     ReflectionNotifications.rescheduleFromDefaults()
                     UntrackedNotifications.rescheduleFromDefaults()
                     WeeklyReviewNotifications.rescheduleFromDefaults()
+                    PlaceArrivalNotifications.registerCategory()
+                    GeofenceService.shared.refresh()
                 }
         }
         .modelContainer(sharedContainer)

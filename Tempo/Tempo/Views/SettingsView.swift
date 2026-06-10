@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreLocation
 import UserNotifications
 import LifeTrackerCore
 
@@ -16,6 +17,8 @@ struct SettingsView: View {
     @AppStorage(AppAppearance.storageKey) private var appearanceRaw = AppAppearance.system.rawValue
 
     @AppStorage("capture.noteOnStop") private var noteOnStop = false
+
+    @AppStorage(GeofenceService.enabledKey) private var arrivalEnabled = false
 
     @AppStorage(UntrackedNotifications.Defaults.enabled) private var untrackedEnabled = false
     @AppStorage(UntrackedNotifications.Defaults.hour) private var untrackedHour = 21
@@ -195,11 +198,41 @@ struct SettingsView: View {
             } label: {
                 Label("Places", systemImage: "mappin.and.ellipse")
             }
+            Toggle("Notify me when I arrive", isOn: $arrivalEnabled)
+                .onChange(of: arrivalEnabled) { _, isOn in handleArrivalToggle(isOn) }
+            if arrivalEnabled && !GeofenceService.shared.isAlwaysAuthorized {
+                locationAlwaysWarning
+            }
         } header: {
             Text("Suggestions")
         } footer: {
-            Text("Tag places you visit (gym, office) so Tempo can suggest their timer when you arrive.")
+            Text("Tag places you visit (gym, office) so Tempo can suggest their timer — on the Today screen, and as a notification when you arrive.")
         }
+    }
+
+    /// Enabling arrival alerts requests Always location (region monitoring needs it),
+    /// then reconciles monitored regions; disabling clears them.
+    private func handleArrivalToggle(_ isOn: Bool) {
+        if isOn {
+            GeofenceService.shared.requestAlwaysAuthorization()
+        }
+        GeofenceService.shared.refresh(enabled: isOn)
+    }
+
+    /// Shown when arrival alerts are on but Tempo lacks Always location access.
+    private var locationAlwaysWarning: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Label("Allow \"Always\" location access", systemImage: "location.slash")
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.orange)
+            Text("Arrival notifications need Always location access. Enable it for Tempo in iOS Settings.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Button("Open iOS Settings") { openSystemSettings() }
+                .font(.caption.weight(.semibold))
+                .padding(.top, 2)
+        }
+        .padding(.vertical, 4)
     }
 
     private var aboutSection: some View {

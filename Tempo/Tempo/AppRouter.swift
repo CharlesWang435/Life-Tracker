@@ -1,5 +1,7 @@
 import SwiftUI
+import SwiftData
 import UserNotifications
+import LifeTrackerCore
 
 /// The app's top-level tabs. Used as the `TabView` selection so the Home dashboard
 /// can deep-link into any feature tab.
@@ -30,16 +32,28 @@ final class AppRouter {
 /// `UNUserNotificationCenter` delegate so taps flip the shared `AppRouter`.
 final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     let router: AppRouter
+    /// Used to start a timer directly from a place-arrival notification's action.
+    nonisolated(unsafe) let container: ModelContainer
 
-    init(router: AppRouter) {
+    init(router: AppRouter, container: ModelContainer) {
         self.router = router
+        self.container = container
     }
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse
     ) async {
-        let id = response.notification.request.content.userInfo["deepLink"] as? String
+        let userInfo = response.notification.request.content.userInfo
+
+        // Place-arrival: the "Start" action launches the suggested timer; tapping the
+        // body just opens the app to Today.
+        if userInfo["placeArrival"] as? Bool == true {
+            await handlePlaceArrival(response: response, userInfo: userInfo)
+            return
+        }
+
+        let id = userInfo["deepLink"] as? String
         let link: DeepLink?
         switch id {
         case ReflectionNotifications.deepLinkID: link = .reflection
@@ -50,6 +64,18 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
         if let link {
             await MainActor.run { router.deepLink = link }
         }
+    }
+
+    @MainActor
+    private func handlePlaceArrival(response: UNNotificationResponse, userInfo: [AnyHashable: Any]) {
+        router.selectedTab = .today
+        guard response.actionIdentifier == PlaceArrivalNotifications.startActionID,
+              let idString = userInfo["categoryID"] as? String,
+              let categoryID = UUID(uuidString: idString) else { return }
+        let context = container.mainContext
+        let categories = (try? context.fetch(FetchDescriptor<LogCategory>())) ?? []
+        guard let category = categories.first(where: { $0.id == categoryID }) else { return }
+        SessionActions.start(category: category, in: context)
     }
 
     /// Show the banner even while Tempo is foregrounded, so the reminder isn't silently dropped.

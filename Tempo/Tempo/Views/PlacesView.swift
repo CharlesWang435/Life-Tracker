@@ -77,6 +77,7 @@ struct PlacesView: View {
         for index in offsets {
             PlaceActions.delete(places[index], in: context)
         }
+        GeofenceService.shared.refresh()   // stop monitoring removed places
     }
 }
 
@@ -235,6 +236,7 @@ struct PlaceEditorView: View {
                 in: context
             )
         }
+        GeofenceService.shared.refresh()   // begin/refresh monitoring for this place
         Haptics.success()
         dismiss()
     }
