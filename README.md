@@ -4,7 +4,7 @@ Tempo is a life-logging iOS app built on categorical stopwatches. Tap a category
 
 Most people can't recall at the end of the day what they did or for how long. Tempo solves that the way Screen Time solves it for your phone — but for real life: sleeping, working, studying, exercising, cooking, socialising.
 
-<img src="Tempo%20App%20Image.png" alt="Tempo app screenshot" width="160">
+<img src="Tempo%20App%20Image.png" alt="Tempo app screenshot" width="72">
 
 
 ## How it works
